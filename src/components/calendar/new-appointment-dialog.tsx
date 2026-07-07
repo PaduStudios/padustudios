@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { format, parse } from "date-fns";
+import { addDays, format, parse } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarDays, Check, ChevronRight, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
