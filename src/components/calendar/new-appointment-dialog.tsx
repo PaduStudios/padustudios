@@ -77,7 +77,7 @@ export function NewAppointmentDialog({
     setStep("when");
     setDate(seed?.date ?? "");
     setStart(seed?.start ?? "20:00");
-    setDuration(120);
+    setDurationHours(2);
     setMode("existing");
     setSelectedClientId("");
     setClientQuery("");
