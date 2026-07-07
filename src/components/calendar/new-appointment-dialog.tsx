@@ -56,7 +56,7 @@ export function NewAppointmentDialog({
   const [step, setStep] = useState<Step>("when");
   const [date, setDate] = useState<string>(seed?.date ?? "");
   const [start, setStart] = useState<string>(seed?.start ?? "20:00");
-  const [duration, setDuration] = useState<number>(120);
+  const [durationHours, setDurationHours] = useState<number>(2);
 
   const [mode, setMode] = useState<"existing" | "new">("existing");
   const [selectedClientId, setSelectedClientId] = useState<string>("");
