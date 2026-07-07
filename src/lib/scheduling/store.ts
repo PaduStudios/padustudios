@@ -222,6 +222,13 @@ export const store = {
     const norm = phone.replace(/\D/g, "");
     return state.clients.find((c) => c.phone.replace(/\D/g, "") === norm);
   },
+  deleteClient(id: string) {
+    state = {
+      ...state,
+      clients: state.clients.filter((c) => c.id !== id),
+    };
+    persist();
+  },
 
   // ── Appointments ───────────────────────────────────────────────────────────
   addAppointment(
