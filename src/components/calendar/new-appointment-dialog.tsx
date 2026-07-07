@@ -250,31 +250,27 @@ export function NewAppointmentDialog({
                 />
               </Field>
 
-              <Field label="Duração">
-                <div className="flex flex-wrap gap-1.5">
-                  {DURATIONS.map((d) => (
-                    <button
-                      key={d}
-                      type="button"
-                      onClick={() => setDuration(d)}
-                      className={cn(
-                        "h-9 rounded-md border px-3 text-[12px] font-semibold transition-colors",
-                        duration === d
-                          ? "border-primary bg-primary-muted text-primary"
-                          : "border-border bg-surface-2 text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      {d >= 60 ? `${d / 60}h` : `${d}min`}
-                      {d % 60 !== 0 && d >= 60
-                        ? `${d % 60}min`
-                        : ""}
-                    </button>
+              <Field label="Duração do ensaio">
+                <select
+                  value={durationHours}
+                  onChange={(e) => setDurationHours(Number(e.target.value))}
+                  className="h-10 w-full appearance-none rounded-md border border-border bg-surface-2 px-3 text-[13px] font-medium outline-none focus:border-primary/50"
+                >
+                  {DURATION_HOURS.map((h) => (
+                    <option key={h} value={h}>
+                      {h} {h === 1 ? "hora" : "horas"}
+                    </option>
                   ))}
-                </div>
+                </select>
                 <p className="mt-2 text-[11.5px] text-muted-foreground">
-                  Termina às <span className="font-mono">{end}</span>
+                  Mínimo 2h. Termina às{" "}
+                  <span className="font-mono text-foreground">{end}</span>
+                  {endsNextDay && (
+                    <> ({endDateLabel} · dia seguinte)</>
+                  )}
                 </p>
               </Field>
+
 
               <Field label="Sala">
                 <div className="grid grid-cols-3 gap-1.5">
