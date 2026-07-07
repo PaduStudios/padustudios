@@ -14,7 +14,101 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      appointments: {
+        Row: {
+          client_id: string
+          created_at: string
+          date: string
+          end_time: string
+          ends_next_day: boolean
+          id: string
+          notes: string | null
+          payment_method: string | null
+          price: number | null
+          room: string | null
+          start_time: string
+          status: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          date: string
+          end_time: string
+          ends_next_day?: boolean
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          price?: number | null
+          room?: string | null
+          start_time: string
+          status?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          date?: string
+          end_time?: string
+          ends_next_day?: boolean
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          price?: number | null
+          room?: string | null
+          start_time?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clients: {
+        Row: {
+          band: string | null
+          cpf: string | null
+          created_at: string
+          email: string | null
+          id: string
+          members: number | null
+          name: string
+          notes: string | null
+          origin: string
+          phone: string
+          updated_at: string
+        }
+        Insert: {
+          band?: string | null
+          cpf?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          members?: number | null
+          name: string
+          notes?: string | null
+          origin?: string
+          phone: string
+          updated_at?: string
+        }
+        Update: {
+          band?: string | null
+          cpf?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          members?: number | null
+          name?: string
+          notes?: string | null
+          origin?: string
+          phone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
