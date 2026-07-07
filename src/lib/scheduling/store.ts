@@ -155,16 +155,25 @@ export const store = {
     return appt;
   },
   async updateAppointment(id: string, patch: Partial<Appointment>) {
-    const payload: Record<string, unknown> = {};
+    const payload: {
+      status?: string; date?: string; start_time?: string; end_time?: string;
+      ends_next_day?: boolean; room?: string | null; price?: number | null;
+      notes?: string | null;
+    } = {};
     if (patch.status !== undefined) payload.status = patch.status;
     if (patch.date !== undefined) payload.date = patch.date;
     if (patch.start !== undefined) payload.start_time = patch.start;
     if (patch.end !== undefined) payload.end_time = patch.end;
     if (patch.endsNextDay !== undefined) payload.ends_next_day = patch.endsNextDay;
-    if (patch.room !== undefined) payload.room = patch.room;
-    if (patch.price !== undefined) payload.price = patch.price;
-    if (patch.notes !== undefined) payload.notes = patch.notes;
+    if (patch.room !== undefined) payload.room = patch.room ?? null;
+    if (patch.price !== undefined) payload.price = patch.price ?? null;
+    if (patch.notes !== undefined) payload.notes = patch.notes ?? null;
     await supabase.from("appointments").update(payload).eq("id", id);
+    setState({
+      ...state,
+      appointments: state.appointments.map((a) => (a.id === id ? { ...a, ...patch } : a)),
+    });
+  },
     setState({
       ...state,
       appointments: state.appointments.map((a) => (a.id === id ? { ...a, ...patch } : a)),
