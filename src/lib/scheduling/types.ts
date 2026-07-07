@@ -28,6 +28,8 @@ export interface Appointment {
   start: string;
   /** 24h "HH:mm". End is exclusive. */
   end: string;
+  /** True when the end time falls on the day after `date` (crosses midnight). */
+  endsNextDay?: boolean;
   status: AppointmentStatus;
   room?: string;
   price?: number;

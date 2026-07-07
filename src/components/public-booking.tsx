@@ -41,7 +41,7 @@ export function PublicBooking() {
     null
   );
 
-  function submit() {
+  async function submit() {
     if (!pick) return;
     if (!form.name.trim() || !form.phone.trim()) {
       toast.error("Preencha nome e telefone");
@@ -53,26 +53,34 @@ export function PublicBooking() {
       setPick(null);
       return;
     }
-    const client = store.findClientByPhone(form.phone) ??
-      store.addClient({
-        name: form.name.trim(),
-        phone: form.phone.trim(),
-        band: form.band.trim() || undefined,
-        members: form.members ? Number(form.members) : undefined,
-        origin: "site",
+    try {
+      const existing = store.findClientByPhone(form.phone);
+      const client =
+        existing ??
+        (await store.addClient({
+          name: form.name.trim(),
+          phone: form.phone.trim(),
+          band: form.band.trim() || undefined,
+          members: form.members ? Number(form.members) : undefined,
+          origin: "site",
+          notes: form.notes.trim() || undefined,
+        }));
+      await store.addAppointment({
+        clientId: client.id,
+        date: pick.date,
+        start: pick.start,
+        end,
+        status: "pending",
+        room: "Sala A",
         notes: form.notes.trim() || undefined,
       });
-    store.addAppointment({
-      clientId: client.id,
-      date: pick.date,
-      start: pick.start,
-      end,
-      status: "pending",
-      room: "Sala A",
-      notes: form.notes.trim() || undefined,
-    });
-    setDone({ date: pick.date, start: pick.start, end });
+      setDone({ date: pick.date, start: pick.start, end });
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao enviar solicitação");
+    }
   }
+
 
   if (done) {
     const d = parse(done.date, "yyyy-MM-dd", new Date());

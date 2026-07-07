@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { format, parse } from "date-fns";
+import { addDays, format, parse } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarDays, Check, ChevronRight, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
@@ -34,7 +34,8 @@ interface Props {
 
 type Step = "when" | "who";
 
-const DURATIONS = [60, 90, 120, 180, 240];
+// Ensaio: min 2h, up to 12h, step 1h.
+const DURATION_HOURS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
 const ORIGINS: { value: ClientOrigin; label: string }[] = [
   { value: "whatsapp", label: "WhatsApp" },
@@ -55,7 +56,7 @@ export function NewAppointmentDialog({
   const [step, setStep] = useState<Step>("when");
   const [date, setDate] = useState<string>(seed?.date ?? "");
   const [start, setStart] = useState<string>(seed?.start ?? "20:00");
-  const [duration, setDuration] = useState<number>(120);
+  const [durationHours, setDurationHours] = useState<number>(2);
 
   const [mode, setMode] = useState<"existing" | "new">("existing");
   const [selectedClientId, setSelectedClientId] = useState<string>("");
@@ -76,7 +77,7 @@ export function NewAppointmentDialog({
     setStep("when");
     setDate(seed?.date ?? "");
     setStart(seed?.start ?? "20:00");
-    setDuration(120);
+    setDurationHours(2);
     setMode("existing");
     setSelectedClientId("");
     setClientQuery("");
@@ -92,7 +93,21 @@ export function NewAppointmentDialog({
     setNotes("");
   }, [open, seed]);
 
-  const end = useMemo(() => addMinutesToTime(start, duration), [start, duration]);
+  const { end, endsNextDay, endDateLabel } = useMemo(() => {
+    const [h, m] = start.split(":").map(Number);
+    const totalMin = h * 60 + m + durationHours * 60;
+    const endMin = totalMin % (24 * 60);
+    const crosses = totalMin >= 24 * 60;
+    const eh = Math.floor(endMin / 60);
+    const em = endMin % 60;
+    const endStr = `${String(eh).padStart(2, "0")}:${String(em).padStart(2, "0")}`;
+    let label = "";
+    if (crosses && date) {
+      const d = parse(date, "yyyy-MM-dd", new Date());
+      label = format(addDays(d, 1), "d 'de' MMM", { locale: ptBR });
+    }
+    return { end: endStr, endsNextDay: crosses, endDateLabel: label };
+  }, [start, durationHours, date]);
 
   const availability = useMemo(() => {
     if (!date) return null;
@@ -119,52 +134,62 @@ export function NewAppointmentDialog({
     setStart(s.start);
   }
 
-  function submit() {
+  async function submit() {
     if (!date || !start || !end) return;
 
     let clientId = selectedClientId;
-    if (mode === "new") {
-      if (!newClient.name.trim() || !newClient.phone.trim()) {
-        toast.error("Nome e telefone são obrigatórios");
+    try {
+      if (mode === "new") {
+        if (!newClient.name.trim() || !newClient.phone.trim()) {
+          toast.error("Nome e telefone são obrigatórios");
+          return;
+        }
+        const existing = store.findClientByPhone(newClient.phone.trim());
+        if (existing) {
+          clientId = existing.id;
+        } else {
+          const created = await store.addClient({
+            name: newClient.name.trim(),
+            phone: newClient.phone.trim(),
+            email: newClient.email.trim() || undefined,
+            band: newClient.band.trim() || undefined,
+            members: newClient.members ? Number(newClient.members) : undefined,
+            origin: newClient.origin,
+          });
+          clientId = created.id;
+        }
+      }
+      if (!clientId) {
+        toast.error("Selecione um cliente");
         return;
       }
-      const created = store.addClient({
-        name: newClient.name.trim(),
-        phone: newClient.phone.trim(),
-        email: newClient.email.trim() || undefined,
-        band: newClient.band.trim() || undefined,
-        members: newClient.members
-          ? Number(newClient.members)
-          : undefined,
-        origin: newClient.origin,
-      });
-      clientId = created.id;
-    }
-    if (!clientId) {
-      toast.error("Selecione um cliente");
-      return;
-    }
-    if (!isSlotFree(appointments, date, start, end)) {
-      toast.error("Este horário acabou de ser ocupado");
-      return;
-    }
+      if (!isSlotFree(appointments, date, start, end)) {
+        toast.error("Este horário acabou de ser ocupado");
+        return;
+      }
 
-    const created = store.addAppointment({
-      clientId,
-      date,
-      start,
-      end,
-      status: "confirmed",
-      room,
-      notes: notes.trim() || undefined,
-    });
-    const client = store.getSnapshot().clients.find((c) => c.id === clientId);
-    toast.success("Ensaio agendado", {
-      description: `${client?.band || client?.name} · ${formatDatePt(date)} · ${start}–${end}`,
-    });
-    onCreated?.(created);
-    onOpenChange(false);
+      const created = await store.addAppointment({
+        clientId,
+        date,
+        start,
+        end,
+        endsNextDay,
+        status: "confirmed",
+        room,
+        notes: notes.trim() || undefined,
+      });
+      const client = store.getSnapshot().clients.find((c) => c.id === clientId);
+      toast.success("Ensaio agendado", {
+        description: `${client?.band || client?.name} · ${formatDatePt(date)} · ${start}–${end}${endsNextDay ? " (dia seguinte)" : ""}`,
+      });
+      onCreated?.(created);
+      onOpenChange(false);
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao salvar agendamento");
+    }
   }
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -235,31 +260,27 @@ export function NewAppointmentDialog({
                 />
               </Field>
 
-              <Field label="Duração">
-                <div className="flex flex-wrap gap-1.5">
-                  {DURATIONS.map((d) => (
-                    <button
-                      key={d}
-                      type="button"
-                      onClick={() => setDuration(d)}
-                      className={cn(
-                        "h-9 rounded-md border px-3 text-[12px] font-semibold transition-colors",
-                        duration === d
-                          ? "border-primary bg-primary-muted text-primary"
-                          : "border-border bg-surface-2 text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      {d >= 60 ? `${d / 60}h` : `${d}min`}
-                      {d % 60 !== 0 && d >= 60
-                        ? `${d % 60}min`
-                        : ""}
-                    </button>
+              <Field label="Duração do ensaio">
+                <select
+                  value={durationHours}
+                  onChange={(e) => setDurationHours(Number(e.target.value))}
+                  className="h-10 w-full appearance-none rounded-md border border-border bg-surface-2 px-3 text-[13px] font-medium outline-none focus:border-primary/50"
+                >
+                  {DURATION_HOURS.map((h) => (
+                    <option key={h} value={h}>
+                      {h} {h === 1 ? "hora" : "horas"}
+                    </option>
                   ))}
-                </div>
+                </select>
                 <p className="mt-2 text-[11.5px] text-muted-foreground">
-                  Termina às <span className="font-mono">{end}</span>
+                  Mínimo 2h. Termina às{" "}
+                  <span className="font-mono text-foreground">{end}</span>
+                  {endsNextDay && (
+                    <> ({endDateLabel} · dia seguinte)</>
+                  )}
                 </p>
               </Field>
+
 
               <Field label="Sala">
                 <div className="grid grid-cols-3 gap-1.5">
