@@ -34,7 +34,8 @@ interface Props {
 
 type Step = "when" | "who";
 
-const DURATIONS = [60, 90, 120, 180, 240];
+// Ensaio: min 2h, up to 12h, step 1h.
+const DURATION_HOURS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
 const ORIGINS: { value: ClientOrigin; label: string }[] = [
   { value: "whatsapp", label: "WhatsApp" },
