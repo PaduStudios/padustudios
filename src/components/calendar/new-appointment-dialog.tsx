@@ -134,52 +134,62 @@ export function NewAppointmentDialog({
     setStart(s.start);
   }
 
-  function submit() {
+  async function submit() {
     if (!date || !start || !end) return;
 
     let clientId = selectedClientId;
-    if (mode === "new") {
-      if (!newClient.name.trim() || !newClient.phone.trim()) {
-        toast.error("Nome e telefone são obrigatórios");
+    try {
+      if (mode === "new") {
+        if (!newClient.name.trim() || !newClient.phone.trim()) {
+          toast.error("Nome e telefone são obrigatórios");
+          return;
+        }
+        const existing = store.findClientByPhone(newClient.phone.trim());
+        if (existing) {
+          clientId = existing.id;
+        } else {
+          const created = await store.addClient({
+            name: newClient.name.trim(),
+            phone: newClient.phone.trim(),
+            email: newClient.email.trim() || undefined,
+            band: newClient.band.trim() || undefined,
+            members: newClient.members ? Number(newClient.members) : undefined,
+            origin: newClient.origin,
+          });
+          clientId = created.id;
+        }
+      }
+      if (!clientId) {
+        toast.error("Selecione um cliente");
         return;
       }
-      const created = store.addClient({
-        name: newClient.name.trim(),
-        phone: newClient.phone.trim(),
-        email: newClient.email.trim() || undefined,
-        band: newClient.band.trim() || undefined,
-        members: newClient.members
-          ? Number(newClient.members)
-          : undefined,
-        origin: newClient.origin,
-      });
-      clientId = created.id;
-    }
-    if (!clientId) {
-      toast.error("Selecione um cliente");
-      return;
-    }
-    if (!isSlotFree(appointments, date, start, end)) {
-      toast.error("Este horário acabou de ser ocupado");
-      return;
-    }
+      if (!isSlotFree(appointments, date, start, end)) {
+        toast.error("Este horário acabou de ser ocupado");
+        return;
+      }
 
-    const created = store.addAppointment({
-      clientId,
-      date,
-      start,
-      end,
-      status: "confirmed",
-      room,
-      notes: notes.trim() || undefined,
-    });
-    const client = store.getSnapshot().clients.find((c) => c.id === clientId);
-    toast.success("Ensaio agendado", {
-      description: `${client?.band || client?.name} · ${formatDatePt(date)} · ${start}–${end}`,
-    });
-    onCreated?.(created);
-    onOpenChange(false);
+      const created = await store.addAppointment({
+        clientId,
+        date,
+        start,
+        end,
+        endsNextDay,
+        status: "confirmed",
+        room,
+        notes: notes.trim() || undefined,
+      });
+      const client = store.getSnapshot().clients.find((c) => c.id === clientId);
+      toast.success("Ensaio agendado", {
+        description: `${client?.band || client?.name} · ${formatDatePt(date)} · ${start}–${end}${endsNextDay ? " (dia seguinte)" : ""}`,
+      });
+      onCreated?.(created);
+      onOpenChange(false);
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao salvar agendamento");
+    }
   }
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
