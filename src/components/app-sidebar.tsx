@@ -1,38 +1,15 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import {
-  Calendar,
-  Users,
-  Sparkles,
-  Wallet,
-  Guitar,
-  Zap,
-  Settings,
-  LayoutGrid,
-  ChevronsUpDown,
-} from "lucide-react";
+import { Calendar, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
   to: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
-  soon?: boolean;
 }
 
 const primary: NavItem[] = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutGrid, soon: true },
   { to: "/calendar", label: "Calendário", icon: Calendar },
-  { to: "/clients", label: "Clientes", icon: Users },
-];
-
-const business: NavItem[] = [
-  { to: "/crm", label: "CRM", icon: Sparkles, soon: true },
-  { to: "/finance", label: "Financeiro", icon: Wallet, soon: true },
-];
-
-const operations: NavItem[] = [
-  { to: "/equipment", label: "Equipamentos", icon: Guitar, soon: true },
-  { to: "/automation", label: "Automação", icon: Zap, soon: true },
 ];
 
 export function AppSidebar() {
@@ -40,7 +17,6 @@ export function AppSidebar() {
 
   return (
     <aside className="hidden w-[240px] shrink-0 flex-col border-r border-border bg-surface/40 backdrop-blur-xl md:flex">
-      {/* Brand */}
       <div className="flex h-16 items-center gap-2.5 px-5">
         <div
           className="grid h-8 w-8 place-items-center rounded-lg text-[11px] font-black tracking-tight text-primary-foreground shadow-[0_0_0_1px_color-mix(in_oklch,_var(--primary)_50%,_transparent)]"
@@ -49,32 +25,45 @@ export function AppSidebar() {
           P.
         </div>
         <div className="min-w-0 leading-none">
-          <p className="text-[13px] font-bold tracking-tight">Padu OS</p>
-          <p className="mt-1 text-[10px] font-medium text-muted-foreground">
-            Studios · Teodoro
-          </p>
+          <p className="text-[14px] font-bold tracking-tight">Padu Studios</p>
         </div>
       </div>
 
       <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-2">
-        <NavGroup items={primary} pathname={pathname} />
-        <NavGroup label="Negócio" items={business} pathname={pathname} />
-        <NavGroup label="Operação" items={operations} pathname={pathname} />
+        <div className="space-y-0.5">
+          {primary.map((item) => {
+            const active = pathname === item.to;
+            return (
+              <Link
+                key={item.to}
+                to={item.to}
+                className={cn(
+                  "group flex items-center gap-3 rounded-md px-2 py-1.5 text-[13px] font-medium transition-all",
+                  active
+                    ? "bg-primary-muted text-foreground"
+                    : "text-muted-foreground hover:bg-surface-2 hover:text-foreground"
+                )}
+              >
+                <item.icon
+                  className={cn(
+                    "h-4 w-4 shrink-0 transition-colors",
+                    active
+                      ? "text-primary"
+                      : "text-muted-foreground group-hover:text-foreground"
+                  )}
+                />
+                <span className="flex-1 truncate">{item.label}</span>
+                {active && (
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_8px_var(--primary)]" />
+                )}
+              </Link>
+            );
+          })}
+        </div>
       </nav>
 
-      {/* Footer */}
       <div className="border-t border-border p-3">
-        <Link
-          to="/settings"
-          className={cn(
-            "flex items-center gap-3 rounded-md px-2 py-1.5 text-[13px] font-medium text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground",
-            pathname === "/settings" && "bg-surface-2 text-foreground"
-          )}
-        >
-          <Settings className="h-4 w-4" />
-          Configurações
-        </Link>
-        <button className="mt-2 flex w-full items-center gap-3 rounded-md p-2 text-left transition-colors hover:bg-surface-2">
+        <button className="flex w-full items-center gap-3 rounded-md p-2 text-left transition-colors hover:bg-surface-2">
           <div className="grid h-7 w-7 place-items-center rounded-full bg-surface-3 text-[11px] font-bold">
             P
           </div>
@@ -88,60 +77,5 @@ export function AppSidebar() {
         </button>
       </div>
     </aside>
-  );
-}
-
-function NavGroup({
-  label,
-  items,
-  pathname,
-}: {
-  label?: string;
-  items: NavItem[];
-  pathname: string;
-}) {
-  return (
-    <div>
-      {label && (
-        <p className="mb-1.5 px-2 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70">
-          {label}
-        </p>
-      )}
-      <div className="space-y-0.5">
-        {items.map((item) => {
-          const active = pathname === item.to;
-          return (
-            <Link
-              key={item.to}
-              to={item.to}
-              className={cn(
-                "group flex items-center gap-3 rounded-md px-2 py-1.5 text-[13px] font-medium transition-all",
-                active
-                  ? "bg-primary-muted text-foreground"
-                  : "text-muted-foreground hover:bg-surface-2 hover:text-foreground"
-              )}
-            >
-              <item.icon
-                className={cn(
-                  "h-4 w-4 shrink-0 transition-colors",
-                  active
-                    ? "text-primary"
-                    : "text-muted-foreground group-hover:text-foreground"
-                )}
-              />
-              <span className="flex-1 truncate">{item.label}</span>
-              {item.soon && (
-                <span className="rounded-sm border border-border px-1 py-px text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  em breve
-                </span>
-              )}
-              {active && (
-                <span className="h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_8px_var(--primary)]" />
-              )}
-            </Link>
-          );
-        })}
-      </div>
-    </div>
   );
 }
