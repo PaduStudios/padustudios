@@ -204,6 +204,8 @@ export const store = {
     state = seed();
     persist();
   },
+
+  // ── Clients ────────────────────────────────────────────────────────────────
   addClient(input: Omit<Client, "id" | "createdAt" | "updatedAt">): Client {
     const now = new Date().toISOString();
     const client: Client = {
@@ -220,6 +222,8 @@ export const store = {
     const norm = phone.replace(/\D/g, "");
     return state.clients.find((c) => c.phone.replace(/\D/g, "") === norm);
   },
+
+  // ── Appointments ───────────────────────────────────────────────────────────
   addAppointment(
     input: Omit<Appointment, "id" | "createdAt">
   ): Appointment {
@@ -248,6 +252,8 @@ export const store = {
     };
     persist();
   },
+
+  // ── Leads ──────────────────────────────────────────────────────────────────
   addLead(input: Omit<Lead, "id" | "createdAt">): Lead {
     const lead: Lead = {
       ...input,
@@ -257,6 +263,22 @@ export const store = {
     state = { ...state, leads: [...state.leads, lead] };
     persist();
     return lead;
+  },
+  updateLead(id: string, patch: Partial<Omit<Lead, "id" | "createdAt">>) {
+    state = {
+      ...state,
+      leads: state.leads.map((l) =>
+        l.id === id ? { ...l, ...patch } : l
+      ),
+    };
+    persist();
+  },
+  deleteLead(id: string) {
+    state = {
+      ...state,
+      leads: state.leads.filter((l) => l.id !== id),
+    };
+    persist();
   },
 };
 

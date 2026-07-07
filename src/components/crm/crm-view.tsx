@@ -19,9 +19,9 @@ type Tab = "pipeline" | "clientes";
 type LeadStatus = Lead["status"];
 
 const COLUMNS: { key: LeadStatus; label: string; accent: string }[] = [
-  { key: "open",      label: "Abertos",    accent: "text-primary border-primary/30" },
-  { key: "converted", label: "Convertidos", accent: "text-green-500 border-green-500/30" },
-  { key: "lost",      label: "Perdidos",    accent: "text-destructive border-destructive/30" },
+  { key: "open",      label: "Abertos",     accent: "text-primary border-primary/30" },
+  { key: "converted", label: "Convertidos",  accent: "text-green-500 border-green-500/30" },
+  { key: "lost",      label: "Perdidos",     accent: "text-destructive border-destructive/30" },
 ];
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
@@ -30,24 +30,13 @@ const STATUS_LABELS: Record<LeadStatus, string> = {
   lost: "Perdido",
 };
 
+// ── Lead Card ────────────────────────────────────────────────────────────────
 function LeadCard({ lead }: { lead: Lead }) {
-  const [open, setOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   function moveTo(status: LeadStatus) {
-    store.addLead; // already exists — update via direct state patch
-    // We update by replacing the lead in the store
-    const current = store.getSnapshot();
-    const updated = current.leads.map((l) =>
-      l.id === lead.id ? { ...l, status } : l
-    );
-    // Persist via internal method
-    (store as any)._setState?.({ ...current, leads: updated });
-    // Fallback: re-use addLead workaround via store reset trick
-    // Since store doesn't expose updateLead yet, we do it via the
-    // subscription model — store exposes no direct updateLead, so we
-    // patch the snapshot via a small helper below.
-    patchLead(lead.id, status);
-    setOpen(false);
+    store.updateLead(lead.id, { status });
+    setMenuOpen(false);
   }
 
   return (
@@ -61,14 +50,14 @@ function LeadCard({ lead }: { lead: Lead }) {
         <p className="font-semibold leading-tight">{lead.name}</p>
         <div className="relative">
           <button
-            onClick={() => setOpen((v) => !v)}
+            onClick={() => setMenuOpen((v) => !v)}
             className="flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:border-border-strong hover:text-foreground"
           >
             {STATUS_LABELS[lead.status]}
             <ChevronDown className="h-3 w-3" />
           </button>
-          {open && (
-            <div className="absolute right-0 top-full z-20 mt-1 min-w-[120px] overflow-hidden rounded-md border border-border bg-surface shadow-lg">
+          {menuOpen && (
+            <div className="absolute right-0 top-full z-20 mt-1 min-w-[130px] overflow-hidden rounded-md border border-border bg-surface shadow-lg">
               {COLUMNS.map((col) => (
                 <button
                   key={col.key}
@@ -129,28 +118,10 @@ function LeadCard({ lead }: { lead: Lead }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Minimal updateLead — patches store state directly until backend lands
-// ---------------------------------------------------------------------------
-function patchLead(id: string, status: LeadStatus) {
-  const s = store.getSnapshot();
-  const leads = s.leads.map((l) => (l.id === id ? { ...l, status } : l));
-  // Trick: addLead triggers persist+emit; here we need a direct patch.
-  // We delete the lead and re-add with new status to keep the pub/sub working.
-  const lead = s.leads.find((l) => l.id === id);
-  if (!lead) return;
-  // Remove old + add updated (store has no updateLead yet)
-  const rest = s.leads.filter((l) => l.id !== id);
-  // Directly mutate snapshot via store internals (safe until Supabase swap)
-  Object.assign(s, { leads: rest });
-  store.addLead({ ...lead, status });
-}
-
-// ---------------------------------------------------------------------------
-// Pipeline tab
-// ---------------------------------------------------------------------------
+// ── Pipeline Tab ─────────────────────────────────────────────────────────────
 function PipelineTab() {
   const { leads } = useStore();
+
   const byStatus = useMemo(
     () =>
       COLUMNS.reduce(
@@ -162,8 +133,6 @@ function PipelineTab() {
       ),
     [leads]
   );
-
-  const isEmpty = leads.length === 0;
 
   return (
     <div className="flex h-full gap-4 overflow-x-auto p-6">
@@ -192,11 +161,10 @@ function PipelineTab() {
         </div>
       ))}
 
-      {isEmpty && (
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 text-muted-foreground">
-          <p className="text-[13px]">
-            Nenhum lead ainda. Leads criados pelo formulário de agendamento
-            aparecem aqui.
+      {leads.length === 0 && (
+        <div className="flex flex-1 items-center justify-center">
+          <p className="text-[13px] text-muted-foreground">
+            Nenhum lead ainda. Leads do formulário de agendamento aparecem aqui automaticamente.
           </p>
         </div>
       )}
@@ -204,9 +172,7 @@ function PipelineTab() {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Clientes tab (mirrors clients-view)
-// ---------------------------------------------------------------------------
+// ── Clientes Tab ─────────────────────────────────────────────────────────────
 function ClientesTab() {
   const { clients, appointments } = useStore();
   const [q, setQ] = useState("");
@@ -325,18 +291,34 @@ function ClientesTab() {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Main export
-// ---------------------------------------------------------------------------
+// ── Root ─────────────────────────────────────────────────────────────────────
 export function CrmView() {
   const [tab, setTab] = useState<Tab>("pipeline");
   const { leads, clients } = useStore();
 
   const stats = [
-    { label: "Leads abertos",   value: leads.filter((l) => l.status === "open").length },
-    { label: "Convertidos",      value: leads.filter((l) => l.status === "converted").length },
-    { label: "Total clientes",   value: clients.length },
-    { label: "Taxa conversão",   value: leads.length ? `${Math.round((leads.filter((l) => l.status === "converted").length / leads.length) * 100)}%` : "—" },
+    {
+      label: "Leads abertos",
+      value: leads.filter((l) => l.status === "open").length,
+    },
+    {
+      label: "Convertidos",
+      value: leads.filter((l) => l.status === "converted").length,
+    },
+    {
+      label: "Total clientes",
+      value: clients.length,
+    },
+    {
+      label: "Taxa conversão",
+      value: leads.length
+        ? `${Math.round(
+            (leads.filter((l) => l.status === "converted").length /
+              leads.length) *
+              100
+          )}%`
+        : "—",
+    },
   ];
 
   return (
