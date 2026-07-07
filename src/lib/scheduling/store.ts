@@ -174,11 +174,6 @@ export const store = {
       appointments: state.appointments.map((a) => (a.id === id ? { ...a, ...patch } : a)),
     });
   },
-    setState({
-      ...state,
-      appointments: state.appointments.map((a) => (a.id === id ? { ...a, ...patch } : a)),
-    });
-  },
   async deleteAppointment(id: string) {
     await supabase.from("appointments").delete().eq("id", id);
     setState({
