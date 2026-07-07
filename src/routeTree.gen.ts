@@ -9,173 +9,38 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as BookRouteImport } from './routes/book'
-import { Route as ShellRouteImport } from './routes/_shell'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ShellSettingsRouteImport } from './routes/_shell.settings'
-import { Route as ShellFinanceRouteImport } from './routes/_shell.finance'
-import { Route as ShellEquipmentRouteImport } from './routes/_shell.equipment'
-import { Route as ShellDashboardRouteImport } from './routes/_shell.dashboard'
-import { Route as ShellCrmRouteImport } from './routes/_shell.crm'
-import { Route as ShellClientsRouteImport } from './routes/_shell.clients'
-import { Route as ShellCalendarRouteImport } from './routes/_shell.calendar'
-import { Route as ShellAutomationRouteImport } from './routes/_shell.automation'
 
-const BookRoute = BookRouteImport.update({
-  id: '/book',
-  path: '/book',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ShellRoute = ShellRouteImport.update({
-  id: '/_shell',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ShellSettingsRoute = ShellSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => ShellRoute,
-} as any)
-const ShellFinanceRoute = ShellFinanceRouteImport.update({
-  id: '/finance',
-  path: '/finance',
-  getParentRoute: () => ShellRoute,
-} as any)
-const ShellEquipmentRoute = ShellEquipmentRouteImport.update({
-  id: '/equipment',
-  path: '/equipment',
-  getParentRoute: () => ShellRoute,
-} as any)
-const ShellDashboardRoute = ShellDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => ShellRoute,
-} as any)
-const ShellCrmRoute = ShellCrmRouteImport.update({
-  id: '/crm',
-  path: '/crm',
-  getParentRoute: () => ShellRoute,
-} as any)
-const ShellClientsRoute = ShellClientsRouteImport.update({
-  id: '/clients',
-  path: '/clients',
-  getParentRoute: () => ShellRoute,
-} as any)
-const ShellCalendarRoute = ShellCalendarRouteImport.update({
-  id: '/calendar',
-  path: '/calendar',
-  getParentRoute: () => ShellRoute,
-} as any)
-const ShellAutomationRoute = ShellAutomationRouteImport.update({
-  id: '/automation',
-  path: '/automation',
-  getParentRoute: () => ShellRoute,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/book': typeof BookRoute
-  '/automation': typeof ShellAutomationRoute
-  '/calendar': typeof ShellCalendarRoute
-  '/clients': typeof ShellClientsRoute
-  '/crm': typeof ShellCrmRoute
-  '/dashboard': typeof ShellDashboardRoute
-  '/equipment': typeof ShellEquipmentRoute
-  '/finance': typeof ShellFinanceRoute
-  '/settings': typeof ShellSettingsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/book': typeof BookRoute
-  '/automation': typeof ShellAutomationRoute
-  '/calendar': typeof ShellCalendarRoute
-  '/clients': typeof ShellClientsRoute
-  '/crm': typeof ShellCrmRoute
-  '/dashboard': typeof ShellDashboardRoute
-  '/equipment': typeof ShellEquipmentRoute
-  '/finance': typeof ShellFinanceRoute
-  '/settings': typeof ShellSettingsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/_shell': typeof ShellRouteWithChildren
-  '/book': typeof BookRoute
-  '/_shell/automation': typeof ShellAutomationRoute
-  '/_shell/calendar': typeof ShellCalendarRoute
-  '/_shell/clients': typeof ShellClientsRoute
-  '/_shell/crm': typeof ShellCrmRoute
-  '/_shell/dashboard': typeof ShellDashboardRoute
-  '/_shell/equipment': typeof ShellEquipmentRoute
-  '/_shell/finance': typeof ShellFinanceRoute
-  '/_shell/settings': typeof ShellSettingsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/book'
-    | '/automation'
-    | '/calendar'
-    | '/clients'
-    | '/crm'
-    | '/dashboard'
-    | '/equipment'
-    | '/finance'
-    | '/settings'
+  fullPaths: '/'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/book'
-    | '/automation'
-    | '/calendar'
-    | '/clients'
-    | '/crm'
-    | '/dashboard'
-    | '/equipment'
-    | '/finance'
-    | '/settings'
-  id:
-    | '__root__'
-    | '/'
-    | '/_shell'
-    | '/book'
-    | '/_shell/automation'
-    | '/_shell/calendar'
-    | '/_shell/clients'
-    | '/_shell/crm'
-    | '/_shell/dashboard'
-    | '/_shell/equipment'
-    | '/_shell/finance'
-    | '/_shell/settings'
+  to: '/'
+  id: '__root__' | '/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  ShellRoute: typeof ShellRouteWithChildren
-  BookRoute: typeof BookRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/book': {
-      id: '/book'
-      path: '/book'
-      fullPath: '/book'
-      preLoaderRoute: typeof BookRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_shell': {
-      id: '/_shell'
-      path: ''
-      fullPath: '/'
-      preLoaderRoute: typeof ShellRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -183,93 +48,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_shell/settings': {
-      id: '/_shell/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof ShellSettingsRouteImport
-      parentRoute: typeof ShellRoute
-    }
-    '/_shell/finance': {
-      id: '/_shell/finance'
-      path: '/finance'
-      fullPath: '/finance'
-      preLoaderRoute: typeof ShellFinanceRouteImport
-      parentRoute: typeof ShellRoute
-    }
-    '/_shell/equipment': {
-      id: '/_shell/equipment'
-      path: '/equipment'
-      fullPath: '/equipment'
-      preLoaderRoute: typeof ShellEquipmentRouteImport
-      parentRoute: typeof ShellRoute
-    }
-    '/_shell/dashboard': {
-      id: '/_shell/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof ShellDashboardRouteImport
-      parentRoute: typeof ShellRoute
-    }
-    '/_shell/crm': {
-      id: '/_shell/crm'
-      path: '/crm'
-      fullPath: '/crm'
-      preLoaderRoute: typeof ShellCrmRouteImport
-      parentRoute: typeof ShellRoute
-    }
-    '/_shell/clients': {
-      id: '/_shell/clients'
-      path: '/clients'
-      fullPath: '/clients'
-      preLoaderRoute: typeof ShellClientsRouteImport
-      parentRoute: typeof ShellRoute
-    }
-    '/_shell/calendar': {
-      id: '/_shell/calendar'
-      path: '/calendar'
-      fullPath: '/calendar'
-      preLoaderRoute: typeof ShellCalendarRouteImport
-      parentRoute: typeof ShellRoute
-    }
-    '/_shell/automation': {
-      id: '/_shell/automation'
-      path: '/automation'
-      fullPath: '/automation'
-      preLoaderRoute: typeof ShellAutomationRouteImport
-      parentRoute: typeof ShellRoute
-    }
   }
 }
 
-interface ShellRouteChildren {
-  ShellAutomationRoute: typeof ShellAutomationRoute
-  ShellCalendarRoute: typeof ShellCalendarRoute
-  ShellClientsRoute: typeof ShellClientsRoute
-  ShellCrmRoute: typeof ShellCrmRoute
-  ShellDashboardRoute: typeof ShellDashboardRoute
-  ShellEquipmentRoute: typeof ShellEquipmentRoute
-  ShellFinanceRoute: typeof ShellFinanceRoute
-  ShellSettingsRoute: typeof ShellSettingsRoute
-}
-
-const ShellRouteChildren: ShellRouteChildren = {
-  ShellAutomationRoute: ShellAutomationRoute,
-  ShellCalendarRoute: ShellCalendarRoute,
-  ShellClientsRoute: ShellClientsRoute,
-  ShellCrmRoute: ShellCrmRoute,
-  ShellDashboardRoute: ShellDashboardRoute,
-  ShellEquipmentRoute: ShellEquipmentRoute,
-  ShellFinanceRoute: ShellFinanceRoute,
-  ShellSettingsRoute: ShellSettingsRoute,
-}
-
-const ShellRouteWithChildren = ShellRoute._addFileChildren(ShellRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  ShellRoute: ShellRouteWithChildren,
-  BookRoute: BookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
