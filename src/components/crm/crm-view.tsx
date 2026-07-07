@@ -9,6 +9,7 @@ import {
   ChevronDown,
   Calendar,
   Clock,
+  Trash2,
 } from "lucide-react";
 import { useStore } from "@/hooks/use-store";
 import { store } from "@/lib/scheduling/store";
@@ -37,6 +38,12 @@ function LeadCard({ lead }: { lead: Lead }) {
   function moveTo(status: LeadStatus) {
     store.updateLead(lead.id, { status });
     setMenuOpen(false);
+  }
+
+  function handleDelete() {
+    if (confirm(`Excluir o lead "${lead.name}"? Esta ação não pode ser desfeita.`)) {
+      store.deleteLead(lead.id);
+    }
   }
 
   return (
@@ -113,6 +120,13 @@ function LeadCard({ lead }: { lead: Lead }) {
         >
           <Phone className="h-3.5 w-3.5" />
         </a>
+        <button
+          onClick={handleDelete}
+          className="ml-auto grid h-7 w-7 place-items-center rounded-md border border-border bg-surface text-muted-foreground transition-colors hover:border-destructive/40 hover:text-destructive"
+          title="Excluir lead"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
       </div>
     </motion.div>
   );
@@ -191,6 +205,12 @@ function ClientesTab() {
       count: appointments.filter((a) => a.clientId === c.id).length,
     }));
   }, [clients, appointments, q]);
+
+  function handleDeleteClient(id: string, name: string) {
+    if (confirm(`Excluir o cliente "${name}"? Esta ação não pode ser desfeita.`)) {
+      store.deleteClient(id);
+    }
+  }
 
   return (
     <div className="flex-1 overflow-y-auto p-6">
@@ -276,6 +296,13 @@ function ClientesTab() {
                   >
                     <Phone className="h-3 w-3" />
                   </a>
+                  <button
+                    onClick={() => handleDeleteClient(c.id, c.band || c.name)}
+                    className="grid h-7 w-7 place-items-center rounded-md border border-border bg-surface text-muted-foreground transition-colors hover:border-destructive/40 hover:text-destructive"
+                    title="Excluir cliente"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
                 </div>
               </li>
             );
