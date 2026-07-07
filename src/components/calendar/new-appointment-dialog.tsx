@@ -93,7 +93,21 @@ export function NewAppointmentDialog({
     setNotes("");
   }, [open, seed]);
 
-  const end = useMemo(() => addMinutesToTime(start, duration), [start, duration]);
+  const { end, endsNextDay, endDateLabel } = useMemo(() => {
+    const [h, m] = start.split(":").map(Number);
+    const totalMin = h * 60 + m + durationHours * 60;
+    const endMin = totalMin % (24 * 60);
+    const crosses = totalMin >= 24 * 60;
+    const eh = Math.floor(endMin / 60);
+    const em = endMin % 60;
+    const endStr = `${String(eh).padStart(2, "0")}:${String(em).padStart(2, "0")}`;
+    let label = "";
+    if (crosses && date) {
+      const d = parse(date, "yyyy-MM-dd", new Date());
+      label = format(addDays(d, 1), "d 'de' MMM", { locale: ptBR });
+    }
+    return { end: endStr, endsNextDay: crosses, endDateLabel: label };
+  }, [start, durationHours, date]);
 
   const availability = useMemo(() => {
     if (!date) return null;
