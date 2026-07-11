@@ -9,6 +9,13 @@ import type { Client } from "@/lib/scheduling/types";
 export function ClientsView() {
   const { clients, appointments } = useStore();
   const [q, setQ] = useState("");
+  const [editing, setEditing] = useState<Client | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  function openEdit(c: Client) {
+    setEditing(c);
+    setDialogOpen(true);
+  }
 
   const rows = useMemo(() => {
     const filtered = q
