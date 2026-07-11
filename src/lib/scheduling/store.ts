@@ -3,11 +3,11 @@
 // via useSyncExternalStore. When we plug in the backend, we swap this module
 // for a Supabase client without touching the UI.
 
-import { addDays, format } from "date-fns";
 import type { Appointment, Client, Lead } from "./types";
 import { toISODate } from "./time";
 
-const STORAGE_KEY = "padu-os:store:v1";
+// Bump this suffix to force-reset local state for existing users.
+const STORAGE_KEY = "padu-os:store:v2";
 
 interface StoreShape {
   clients: Client[];
