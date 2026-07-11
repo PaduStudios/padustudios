@@ -145,7 +145,7 @@ export function CalendarView() {
           </motion.div>
         </div>
 
-        {/* RIGHT: details panel */}
+        {/* RIGHT: details panel (desktop) */}
         <aside className="hidden w-[340px] shrink-0 xl:block">
           <DetailsPanel
             appointment={selected}
@@ -159,6 +159,29 @@ export function CalendarView() {
             onSelectAppointment={setSelectedId}
           />
         </aside>
+
+        {/* Mobile / tablet: details as overlay when an appointment is selected */}
+        {selected && (
+          <div className="fixed inset-0 z-40 xl:hidden">
+            <div
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setSelectedId(null)}
+            />
+            <div className="absolute inset-x-0 bottom-0 top-16 overflow-hidden rounded-t-2xl border-t border-border bg-background shadow-2xl sm:inset-4 sm:top-auto sm:h-[85vh] sm:max-w-md sm:mx-auto sm:rounded-2xl sm:border">
+              <DetailsPanel
+                appointment={selected}
+                client={selectedClient}
+                onClose={() => setSelectedId(null)}
+                onNew={() => openNew()}
+                todayAppointments={todayAppointments
+                  .slice()
+                  .sort((a, b) => a.start.localeCompare(b.start))}
+                clientsById={Object.fromEntries(clients.map((c) => [c.id, c]))}
+                onSelectAppointment={setSelectedId}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       <NewAppointmentDialog

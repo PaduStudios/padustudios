@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { format, parse } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarDays, Check, ChevronRight, Sparkles, X } from "lucide-react";
+import { CalendarDays, Check, ChevronRight, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -192,12 +192,6 @@ export function NewAppointmentDialog({
               </p>
             </div>
           </div>
-          <button
-            onClick={() => onOpenChange(false)}
-            className="grid h-7 w-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground"
-          >
-            <X className="h-4 w-4" />
-          </button>
         </div>
 
         {/* Stepper indicator */}
