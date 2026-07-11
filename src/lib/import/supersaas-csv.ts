@@ -9,28 +9,29 @@ export type CsvRow = Record<string, string>;
 
 /** Candidate header names for each logical field, in priority order. */
 export const CLIENT_FIELD_HINTS = {
-  name: ["full name", "name", "nome", "user", "user name", "customer"],
-  phone: ["phone", "mobile", "telephone", "telefone", "celular", "cellphone"],
-  email: ["email", "e-mail", "mail"],
-  band: ["band", "banda", "company", "organization", "empresa", "grupo"],
+  name: ["nome completo", "full name", "name", "nome", "user", "user name", "customer"],
+  phone: ["celular", "phone", "mobile", "telephone", "telefone", "cellphone"],
+  email: ["e-mail", "email", "mail"],
+  cpf: ["cpf", "documento", "document"],
+  band: ["nome da banda", "banda", "band", "company", "organization", "empresa", "grupo"],
   members: ["members", "integrantes", "size", "party size"],
-  notes: ["notes", "note", "comment", "comments", "observação", "observacao", "observações", "observacoes"],
-  createdAt: ["created", "created at", "sign up", "sign-up", "signup date", "registered", "member since"],
+  notes: ["descrição", "descricao", "notes", "note", "comment", "comments", "observação", "observacao", "observações", "observacoes"],
+  createdAt: ["criado em", "created", "created at", "sign up", "sign-up", "signup date", "registered", "member since"],
 } as const;
 
 export const APPOINTMENT_FIELD_HINTS = {
-  userName: ["full name", "name", "user", "user name", "customer", "cliente", "nome"],
-  phone: ["phone", "mobile", "telephone", "telefone", "celular"],
-  email: ["email", "e-mail", "mail"],
+  userName: ["nome completo", "full name", "name", "user", "user name", "customer", "cliente", "nome"],
+  phone: ["celular", "phone", "mobile", "telephone", "telefone"],
+  email: ["e-mail", "email", "mail"],
   date: ["date", "day", "data", "start date", "appointment date"],
-  start: ["start time", "start", "from", "hora início", "hora inicio", "início", "inicio", "time"],
-  end: ["end time", "end", "to", "hora fim", "fim", "until"],
+  start: ["horário de início", "horario de inicio", "start time", "start", "from", "hora início", "hora inicio", "início", "inicio", "time"],
+  end: ["horário de fim", "horario de fim", "end time", "end", "to", "hora fim", "fim", "until"],
   duration: ["duration", "length", "duração", "duracao", "minutes"],
-  room: ["resource", "schedule", "room", "sala", "location", "recurso"],
+  room: ["agenda padu studios", "agenda", "resource", "schedule", "room", "sala", "location", "recurso"],
   price: ["price", "amount", "valor", "preço", "preco", "total"],
   payment: ["payment", "payment method", "pagamento", "método de pagamento", "metodo de pagamento"],
-  status: ["status", "state", "situação", "situacao"],
-  notes: ["notes", "note", "comment", "comments", "description", "observação", "observacao"],
+  status: ["estado", "status", "state", "situação", "situacao"],
+  notes: ["descrição", "descricao", "notes", "note", "comment", "comments", "description", "observação", "observacao"],
 } as const;
 
 export type ClientField = keyof typeof CLIENT_FIELD_HINTS;
