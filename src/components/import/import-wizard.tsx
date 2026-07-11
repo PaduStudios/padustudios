@@ -44,6 +44,7 @@ const CLIENT_FIELD_LABELS: Record<ClientField, string> = {
   name: "Nome completo",
   phone: "Telefone (obrigatório — usado pra dedupe)",
   email: "Email",
+  cpf: "CPF",
   band: "Banda / grupo",
   members: "Nº de integrantes",
   notes: "Observações",
