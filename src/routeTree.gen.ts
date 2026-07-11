@@ -20,6 +20,7 @@ import { Route as ShellCrmRouteImport } from './routes/_shell.crm'
 import { Route as ShellClientsRouteImport } from './routes/_shell.clients'
 import { Route as ShellCalendarRouteImport } from './routes/_shell.calendar'
 import { Route as ShellAutomationRouteImport } from './routes/_shell.automation'
+import { Route as ShellSettingsIndexRouteImport } from './routes/_shell.settings.index'
 import { Route as ShellSettingsImportRouteImport } from './routes/_shell.settings.import'
 
 const BookRoute = BookRouteImport.update({
@@ -76,6 +77,11 @@ const ShellAutomationRoute = ShellAutomationRouteImport.update({
   path: '/automation',
   getParentRoute: () => ShellRoute,
 } as any)
+const ShellSettingsIndexRoute = ShellSettingsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ShellSettingsRoute,
+} as any)
 const ShellSettingsImportRoute = ShellSettingsImportRouteImport.update({
   id: '/import',
   path: '/import',
@@ -94,6 +100,7 @@ export interface FileRoutesByFullPath {
   '/finance': typeof ShellFinanceRoute
   '/settings': typeof ShellSettingsRouteWithChildren
   '/settings/import': typeof ShellSettingsImportRoute
+  '/settings/': typeof ShellSettingsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -105,8 +112,8 @@ export interface FileRoutesByTo {
   '/dashboard': typeof ShellDashboardRoute
   '/equipment': typeof ShellEquipmentRoute
   '/finance': typeof ShellFinanceRoute
-  '/settings': typeof ShellSettingsRouteWithChildren
   '/settings/import': typeof ShellSettingsImportRoute
+  '/settings': typeof ShellSettingsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -122,6 +129,7 @@ export interface FileRoutesById {
   '/_shell/finance': typeof ShellFinanceRoute
   '/_shell/settings': typeof ShellSettingsRouteWithChildren
   '/_shell/settings/import': typeof ShellSettingsImportRoute
+  '/_shell/settings/': typeof ShellSettingsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -137,6 +145,7 @@ export interface FileRouteTypes {
     | '/finance'
     | '/settings'
     | '/settings/import'
+    | '/settings/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -148,8 +157,8 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/equipment'
     | '/finance'
-    | '/settings'
     | '/settings/import'
+    | '/settings'
   id:
     | '__root__'
     | '/'
@@ -164,6 +173,7 @@ export interface FileRouteTypes {
     | '/_shell/finance'
     | '/_shell/settings'
     | '/_shell/settings/import'
+    | '/_shell/settings/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -251,6 +261,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellAutomationRouteImport
       parentRoute: typeof ShellRoute
     }
+    '/_shell/settings/': {
+      id: '/_shell/settings/'
+      path: '/'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof ShellSettingsIndexRouteImport
+      parentRoute: typeof ShellSettingsRoute
+    }
     '/_shell/settings/import': {
       id: '/_shell/settings/import'
       path: '/import'
@@ -263,10 +280,12 @@ declare module '@tanstack/react-router' {
 
 interface ShellSettingsRouteChildren {
   ShellSettingsImportRoute: typeof ShellSettingsImportRoute
+  ShellSettingsIndexRoute: typeof ShellSettingsIndexRoute
 }
 
 const ShellSettingsRouteChildren: ShellSettingsRouteChildren = {
   ShellSettingsImportRoute: ShellSettingsImportRoute,
+  ShellSettingsIndexRoute: ShellSettingsIndexRoute,
 }
 
 const ShellSettingsRouteWithChildren = ShellSettingsRoute._addFileChildren(
