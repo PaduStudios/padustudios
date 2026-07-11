@@ -29,6 +29,7 @@ interface Props {
   clientsById: Record<string, Client>;
   onClose: () => void;
   onNew: () => void;
+  onEdit: (id: string) => void;
   onSelectAppointment: (id: string) => void;
 }
 
@@ -49,6 +50,7 @@ export function DetailsPanel({
   clientsById,
   onClose,
   onNew,
+  onEdit,
   onSelectAppointment,
 }: Props) {
   return (
@@ -60,6 +62,7 @@ export function DetailsPanel({
             appointment={appointment}
             client={client}
             onClose={onClose}
+            onEdit={() => onEdit(appointment.id)}
           />
         ) : (
           <EmptyView
@@ -79,10 +82,12 @@ function SelectedView({
   appointment,
   client,
   onClose,
+  onEdit,
 }: {
   appointment: Appointment;
   client: Client;
   onClose: () => void;
+  onEdit: () => void;
 }) {
   const status = statusMeta[appointment.status];
   const initials = (client.band || client.name)
