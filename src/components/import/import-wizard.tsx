@@ -237,8 +237,8 @@ export function ImportWizard() {
             Importar do SuperSaaS
           </h1>
           <p className="mt-1 text-[13px] text-muted-foreground">
-            Carregue os CSVs de clientes e agendamentos exportados do SuperSaaS.
-            Nada é enviado até você confirmar.
+            Carregue o CSV exportado da sua agenda. Nada é gravado até você confirmar
+            na etapa de revisão.
           </p>
         </div>
       </header>
