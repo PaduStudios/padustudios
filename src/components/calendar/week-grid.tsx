@@ -48,11 +48,16 @@ export function WeekGrid({
     el.scrollTop = y;
   }, []);
 
+  const cols = `64px repeat(${days.length}, minmax(0, 1fr))`;
+
   return (
     <div className="surface-panel flex h-full min-h-0 flex-col overflow-hidden">
-      {/* Header row */}
-      <div className="grid shrink-0 grid-cols-[64px_repeat(7,minmax(0,1fr))] border-b border-border">
-        <div className="border-r border-border" />
+      {/* Header row — no per-cell borders; vertical dividers come from the shared overlay below */}
+      <div
+        className="grid shrink-0 border-b border-border"
+        style={{ gridTemplateColumns: cols }}
+      >
+        <div />
         {days.map((day) => {
           const { weekday, day: d } = formatDayLabel(day);
           const today = isToday(day);
@@ -60,7 +65,7 @@ export function WeekGrid({
             <div
               key={day.toISOString()}
               className={cn(
-                "flex flex-col items-center justify-center gap-0.5 border-r border-border py-2.5 last:border-r-0 transition-colors",
+                "flex flex-col items-center justify-center gap-0.5 py-2.5 transition-colors",
                 today && "bg-primary-muted"
               )}
             >
@@ -92,11 +97,14 @@ export function WeekGrid({
         style={{ contain: "strict" }}
       >
         <div
-          className="relative grid grid-cols-[64px_repeat(7,minmax(0,1fr))]"
-          style={{ height: HOURS * 2 * ROW_HEIGHT }}
+          className="relative grid"
+          style={{
+            height: HOURS * 2 * ROW_HEIGHT,
+            gridTemplateColumns: cols,
+          }}
         >
           {/* Hour column */}
-          <div className="relative border-r border-border">
+          <div className="relative">
             {Array.from({ length: HOURS }).map((_, i) => {
               const hour = DAY_START_HOUR + i;
               return (
@@ -130,8 +138,27 @@ export function WeekGrid({
               />
             );
           })}
+
+          {/* Vertical divider overlay — shared with header via identical grid template */}
+          <div
+            className="pointer-events-none absolute inset-0 grid"
+            style={{ gridTemplateColumns: cols }}
+          >
+            <div className="border-r border-border" />
+            {days.map((day, i) => (
+              <div
+                key={day.toISOString()}
+                className={cn(
+                  i < days.length - 1 && "border-r border-border"
+                )}
+              />
+            ))}
+          </div>
         </div>
       </div>
+
+      {/* Header vertical dividers — absolute overlay aligned to the same grid template.
+          Placed here so header rules line up pixel-perfectly with the body rules. */}
     </div>
   );
 }
