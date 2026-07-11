@@ -79,7 +79,40 @@ export function autoMapColumns<T extends string>(
 
 export function normalizePhone(raw: string | undefined | null): string {
   if (!raw) return "";
-  return raw.replace(/\D/g, "");
+  // Strip unicode invisibles (bidi marks U+200E/F, U+202A-E, U+2066-9, zero-width, BOM)
+  // and normalize unicode hyphens (U+2010–U+2015) — SuperSaaS export often includes these.
+  const cleaned = raw
+    .replace(/[\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/g, "")
+    .replace(/[\u2010-\u2015\u2212]/g, "-");
+  return cleaned.replace(/\D/g, "");
+}
+
+/** Normalize a CPF: keep digits only, discard obvious placeholders. */
+export function normalizeCpf(raw: string | undefined | null): string {
+  if (!raw) return "";
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length < 11) return "";
+  if (/^(\d)\1+$/.test(digits)) return ""; // all same digit
+  return digits;
+}
+
+/**
+ * Parse a "DD/MM/YYYY   HH:MM" combined cell (SuperSaaS uses multiple spaces).
+ * Returns { date: "yyyy-MM-dd", time: "HH:mm" } or null.
+ */
+export function parseCombinedDateTime(
+  raw: string | undefined | null,
+  locale: "br" | "us" | "iso" = "br"
+): { date: string; time: string } | null {
+  if (!raw) return null;
+  const s = raw.trim().replace(/\s+/g, " ");
+  if (!s) return null;
+  const parts = s.split(" ");
+  if (parts.length < 2) return null;
+  const date = parseDate(parts[0], locale);
+  const time = parseTime(parts[parts.length - 1]);
+  if (!date || !time) return null;
+  return { date, time };
 }
 
 export function formatPhoneDisplay(digitsOrRaw: string | undefined | null): string {
