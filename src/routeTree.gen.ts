@@ -20,6 +20,7 @@ import { Route as ShellCrmRouteImport } from './routes/_shell.crm'
 import { Route as ShellClientsRouteImport } from './routes/_shell.clients'
 import { Route as ShellCalendarRouteImport } from './routes/_shell.calendar'
 import { Route as ShellAutomationRouteImport } from './routes/_shell.automation'
+import { Route as ShellSettingsImportRouteImport } from './routes/_shell.settings.import'
 
 const BookRoute = BookRouteImport.update({
   id: '/book',
@@ -75,6 +76,11 @@ const ShellAutomationRoute = ShellAutomationRouteImport.update({
   path: '/automation',
   getParentRoute: () => ShellRoute,
 } as any)
+const ShellSettingsImportRoute = ShellSettingsImportRouteImport.update({
+  id: '/import',
+  path: '/import',
+  getParentRoute: () => ShellSettingsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -86,7 +92,8 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof ShellDashboardRoute
   '/equipment': typeof ShellEquipmentRoute
   '/finance': typeof ShellFinanceRoute
-  '/settings': typeof ShellSettingsRoute
+  '/settings': typeof ShellSettingsRouteWithChildren
+  '/settings/import': typeof ShellSettingsImportRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -98,7 +105,8 @@ export interface FileRoutesByTo {
   '/dashboard': typeof ShellDashboardRoute
   '/equipment': typeof ShellEquipmentRoute
   '/finance': typeof ShellFinanceRoute
-  '/settings': typeof ShellSettingsRoute
+  '/settings': typeof ShellSettingsRouteWithChildren
+  '/settings/import': typeof ShellSettingsImportRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -112,7 +120,8 @@ export interface FileRoutesById {
   '/_shell/dashboard': typeof ShellDashboardRoute
   '/_shell/equipment': typeof ShellEquipmentRoute
   '/_shell/finance': typeof ShellFinanceRoute
-  '/_shell/settings': typeof ShellSettingsRoute
+  '/_shell/settings': typeof ShellSettingsRouteWithChildren
+  '/_shell/settings/import': typeof ShellSettingsImportRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -127,6 +136,7 @@ export interface FileRouteTypes {
     | '/equipment'
     | '/finance'
     | '/settings'
+    | '/settings/import'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -139,6 +149,7 @@ export interface FileRouteTypes {
     | '/equipment'
     | '/finance'
     | '/settings'
+    | '/settings/import'
   id:
     | '__root__'
     | '/'
@@ -152,6 +163,7 @@ export interface FileRouteTypes {
     | '/_shell/equipment'
     | '/_shell/finance'
     | '/_shell/settings'
+    | '/_shell/settings/import'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -239,8 +251,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellAutomationRouteImport
       parentRoute: typeof ShellRoute
     }
+    '/_shell/settings/import': {
+      id: '/_shell/settings/import'
+      path: '/import'
+      fullPath: '/settings/import'
+      preLoaderRoute: typeof ShellSettingsImportRouteImport
+      parentRoute: typeof ShellSettingsRoute
+    }
   }
 }
+
+interface ShellSettingsRouteChildren {
+  ShellSettingsImportRoute: typeof ShellSettingsImportRoute
+}
+
+const ShellSettingsRouteChildren: ShellSettingsRouteChildren = {
+  ShellSettingsImportRoute: ShellSettingsImportRoute,
+}
+
+const ShellSettingsRouteWithChildren = ShellSettingsRoute._addFileChildren(
+  ShellSettingsRouteChildren,
+)
 
 interface ShellRouteChildren {
   ShellAutomationRoute: typeof ShellAutomationRoute
@@ -250,7 +281,7 @@ interface ShellRouteChildren {
   ShellDashboardRoute: typeof ShellDashboardRoute
   ShellEquipmentRoute: typeof ShellEquipmentRoute
   ShellFinanceRoute: typeof ShellFinanceRoute
-  ShellSettingsRoute: typeof ShellSettingsRoute
+  ShellSettingsRoute: typeof ShellSettingsRouteWithChildren
 }
 
 const ShellRouteChildren: ShellRouteChildren = {
@@ -261,7 +292,7 @@ const ShellRouteChildren: ShellRouteChildren = {
   ShellDashboardRoute: ShellDashboardRoute,
   ShellEquipmentRoute: ShellEquipmentRoute,
   ShellFinanceRoute: ShellFinanceRoute,
-  ShellSettingsRoute: ShellSettingsRoute,
+  ShellSettingsRoute: ShellSettingsRouteWithChildren,
 }
 
 const ShellRouteWithChildren = ShellRoute._addFileChildren(ShellRouteChildren)
