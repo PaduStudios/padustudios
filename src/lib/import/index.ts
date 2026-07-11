@@ -9,7 +9,9 @@ import {
   addMinutes,
   mapOrigin,
   mapStatus,
+  normalizeCpf,
   normalizePhone,
+  parseCombinedDateTime,
   parseDate,
   parseDurationMinutes,
   parsePrice,
@@ -27,6 +29,8 @@ export interface AppointmentMapping
 export interface ImportOptions {
   dateLocale: "br" | "us" | "iso";
   defaultOrigin: ClientOrigin;
+  /** When true, `start` / `end` cells contain a combined "DD/MM/YYYY HH:MM" value. */
+  combinedDateTime?: boolean;
 }
 
 export interface ClientImportPlan {
@@ -72,13 +76,12 @@ export function buildClientPlan(
       skipped.push({ row: rowNum, reason: `"${name}" sem telefone` });
       return;
     }
-    if (seenInBatch.has(phone)) {
-      skipped.push({ row: rowNum, reason: `Telefone duplicado no CSV: ${phone}` });
-      return;
-    }
+    // In combined mode the same phone appears on every row of that client — silently skip dupes.
+    if (seenInBatch.has(phone)) return;
     seenInBatch.add(phone);
 
     const email = pickCell(row, mapping.email) || undefined;
+    const cpf = normalizeCpf(pickCell(row, mapping.cpf)) || undefined;
     const band = pickCell(row, mapping.band) || undefined;
     const membersRaw = pickCell(row, mapping.members);
     const members = membersRaw ? Number(membersRaw) || undefined : undefined;
@@ -88,6 +91,7 @@ export function buildClientPlan(
     if (existingClient) {
       const patch: Partial<Client> = {};
       if (!existingClient.email && email) patch.email = email;
+      if (!existingClient.cpf && cpf) patch.cpf = cpf;
       if (!existingClient.band && band) patch.band = band;
       if (!existingClient.members && members) patch.members = members;
       if (!existingClient.notes && notes) patch.notes = notes;
@@ -101,6 +105,7 @@ export function buildClientPlan(
       name: name || phoneRaw || phone,
       phone: phoneRaw || phone,
       email,
+      cpf,
       band,
       members,
       origin: options.defaultOrigin,
@@ -153,21 +158,52 @@ export function buildAppointmentPlan(
   rows.forEach((row, idx) => {
     const rowNum = idx + 2;
 
-    const dateRaw = pickCell(row, mapping.date);
-    const date = parseDate(dateRaw, options.dateLocale);
-    if (!date) {
-      skipped.push({ row: rowNum, reason: `Data inválida: "${dateRaw}"` });
-      return;
+    let date: string | null = null;
+    let start: string | null = null;
+    let end: string | null = null;
+    let crossedMidnight = false;
+
+    if (options.combinedDateTime) {
+      const startRaw = pickCell(row, mapping.start);
+      const parsedStart = parseCombinedDateTime(startRaw, options.dateLocale);
+      if (!parsedStart) {
+        skipped.push({ row: rowNum, reason: `Início inválido: "${startRaw}"` });
+        return;
+      }
+      date = parsedStart.date;
+      start = parsedStart.time;
+
+      const endRaw = pickCell(row, mapping.end);
+      const parsedEnd = parseCombinedDateTime(endRaw, options.dateLocale);
+      if (parsedEnd) {
+        if (parsedEnd.date !== date) {
+          // Cross-midnight — cap at end of day and flag in notes below.
+          end = "23:59";
+          crossedMidnight = true;
+        } else {
+          end = parsedEnd.time;
+        }
+      }
+    } else {
+      const dateRaw = pickCell(row, mapping.date);
+      date = parseDate(dateRaw, options.dateLocale);
+      if (!date) {
+        skipped.push({ row: rowNum, reason: `Data inválida: "${dateRaw}"` });
+        return;
+      }
+      const startRaw = pickCell(row, mapping.start);
+      start = parseTime(startRaw);
+      if (!start) {
+        skipped.push({ row: rowNum, reason: `Horário inválido: "${startRaw}"` });
+        return;
+      }
+      end = parseTime(pickCell(row, mapping.end));
     }
 
-    const startRaw = pickCell(row, mapping.start);
-    const start = parseTime(startRaw);
     if (!start) {
-      skipped.push({ row: rowNum, reason: `Horário inválido: "${startRaw}"` });
+      skipped.push({ row: rowNum, reason: `Sem horário de início` });
       return;
     }
-
-    let end = parseTime(pickCell(row, mapping.end));
     if (!end) {
       const dur = parseDurationMinutes(pickCell(row, mapping.duration));
       if (dur) end = addMinutes(start, dur);
@@ -195,6 +231,12 @@ export function buildAppointmentPlan(
       return;
     }
 
+    const baseNotes = pickCell(row, mapping.notes) || "";
+    const notes =
+      (crossedMidnight
+        ? (baseNotes ? baseNotes + " • " : "") + "(passou da meia-noite — fim ajustado para 23:59)"
+        : baseNotes) || undefined;
+
     toCreate.push({
       _clientKey: clientKey,
       clientId: "", // resolved at commit
@@ -205,7 +247,7 @@ export function buildAppointmentPlan(
       room: pickCell(row, mapping.room) || undefined,
       price: parsePrice(pickCell(row, mapping.price)),
       paymentMethod: pickCell(row, mapping.payment) || undefined,
-      notes: pickCell(row, mapping.notes) || undefined,
+      notes,
     });
   });
 

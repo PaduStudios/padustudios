@@ -44,6 +44,7 @@ const CLIENT_FIELD_LABELS: Record<ClientField, string> = {
   name: "Nome completo",
   phone: "Telefone (obrigatório — usado pra dedupe)",
   email: "Email",
+  cpf: "CPF",
   band: "Banda / grupo",
   members: "Nº de integrantes",
   notes: "Observações",
@@ -88,8 +89,11 @@ function persist(saved: SavedMappings) {
   window.localStorage.setItem(MAPPING_STORAGE_KEY, JSON.stringify(saved));
 }
 
+type ImportMode = "combined" | "classic";
+
 export function ImportWizard() {
   const [step, setStep] = useState<Step>("upload");
+  const [mode, setMode] = useState<ImportMode>("combined");
   const [clientsCsv, setClientsCsv] = useState<ParsedCsv | null>(null);
   const [apptsCsv, setApptsCsv] = useState<ParsedCsv | null>(null);
 
@@ -108,6 +112,8 @@ export function ImportWizard() {
     saved.defaultOrigin ?? "other"
   );
 
+  const combinedDateTime = mode === "combined";
+
   const clientPlan = useMemo<ClientImportPlan | null>(() => {
     if (!clientsCsv) return null;
     return buildClientPlan(clientsCsv.rows, clientMapping, {
@@ -121,12 +127,12 @@ export function ImportWizard() {
     return buildAppointmentPlan(
       apptsCsv.rows,
       apptMapping,
-      { dateLocale, defaultOrigin },
+      { dateLocale, defaultOrigin, combinedDateTime },
       clientPlan.toCreate
     );
-  }, [apptsCsv, apptMapping, clientPlan, dateLocale, defaultOrigin]);
+  }, [apptsCsv, apptMapping, clientPlan, dateLocale, defaultOrigin, combinedDateTime]);
 
-  async function handleFile(kind: "clients" | "appts", file: File) {
+  async function handleFile(kind: "clients" | "appts" | "combined", file: File) {
     const text = await file.text();
     const result = Papa.parse<CsvRow>(text, {
       header: true,
@@ -145,10 +151,19 @@ export function ImportWizard() {
         Object.values(r).some((v) => v && String(v).trim())
       ),
     };
-    if (kind === "clients") {
+    if (kind === "combined") {
+      setClientsCsv(parsed);
+      setApptsCsv(parsed);
+      const autoClient = autoMapColumns(parsed.headers, CLIENT_FIELD_HINTS);
+      const autoAppt = autoMapColumns(parsed.headers, APPOINTMENT_FIELD_HINTS);
+      // In combined mode, `date` isn't a separate column — mirror it to `start`
+      // so validation passes; buildAppointmentPlan will derive the date from the start cell.
+      if (autoAppt.start && !autoAppt.date) autoAppt.date = autoAppt.start;
+      setClientMapping(overlayMapping(autoClient, saved.clients, parsed.headers));
+      setApptMapping(overlayMapping(autoAppt, saved.appointments, parsed.headers));
+    } else if (kind === "clients") {
       setClientsCsv(parsed);
       const auto = autoMapColumns(parsed.headers, CLIENT_FIELD_HINTS);
-      // overlay any saved mapping (only if header still exists)
       const overlaid = overlayMapping(auto, saved.clients, parsed.headers);
       setClientMapping(overlaid);
     } else {
@@ -160,7 +175,12 @@ export function ImportWizard() {
   }
 
   function goToMap() {
-    if (!clientsCsv || !apptsCsv) {
+    if (mode === "combined") {
+      if (!clientsCsv) {
+        toast.error("Envie o CSV antes de continuar");
+        return;
+      }
+    } else if (!clientsCsv || !apptsCsv) {
       toast.error("Envie os dois arquivos CSV antes de continuar");
       return;
     }
@@ -172,9 +192,17 @@ export function ImportWizard() {
       toast.error("Mapeie a coluna de telefone dos clientes");
       return;
     }
-    if (!apptMapping.date || !apptMapping.start) {
-      toast.error("Mapeie ao menos data e horário de início dos ensaios");
+    if (!apptMapping.start) {
+      toast.error("Mapeie ao menos o horário de início dos ensaios");
       return;
+    }
+    if (!combinedDateTime && !apptMapping.date) {
+      toast.error("Mapeie a coluna de data dos ensaios");
+      return;
+    }
+    // Mirror date→start in combined mode so downstream code has a value.
+    if (combinedDateTime && apptMapping.start && !apptMapping.date) {
+      setApptMapping({ ...apptMapping, date: apptMapping.start });
     }
     persist({
       clients: cleanMapping(clientMapping),
@@ -209,8 +237,8 @@ export function ImportWizard() {
             Importar do SuperSaaS
           </h1>
           <p className="mt-1 text-[13px] text-muted-foreground">
-            Carregue os CSVs de clientes e agendamentos exportados do SuperSaaS.
-            Nada é enviado até você confirmar.
+            Carregue o CSV exportado da sua agenda. Nada é gravado até você confirmar
+            na etapa de revisão.
           </p>
         </div>
       </header>
@@ -236,6 +264,8 @@ export function ImportWizard() {
 
       {step === "upload" && (
         <UploadStep
+          mode={mode}
+          setMode={setMode}
           clientsCsv={clientsCsv}
           apptsCsv={apptsCsv}
           onFile={handleFile}
@@ -301,34 +331,88 @@ export function ImportWizard() {
 // ── Steps ───────────────────────────────────────────────────────────────────
 
 function UploadStep({
+  mode,
+  setMode,
   clientsCsv,
   apptsCsv,
   onFile,
   onNext,
 }: {
+  mode: ImportMode;
+  setMode: (m: ImportMode) => void;
   clientsCsv: ParsedCsv | null;
   apptsCsv: ParsedCsv | null;
-  onFile: (k: "clients" | "appts", f: File) => void;
+  onFile: (k: "clients" | "appts" | "combined", f: File) => void;
   onNext: () => void;
 }) {
+  const ready =
+    mode === "combined" ? !!clientsCsv : !!clientsCsv && !!apptsCsv;
+
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      <DropCard
-        title="Clientes / Users"
-        hint="No SuperSaaS: Supervise → Users → Export"
-        file={clientsCsv}
-        onFile={(f) => onFile("clients", f)}
-      />
-      <DropCard
-        title="Agendamentos / Reservations"
-        hint="No SuperSaaS: Reports → Appointments → Export CSV"
-        file={apptsCsv}
-        onFile={(f) => onFile("appts", f)}
-      />
-      <div className="sm:col-span-2 flex justify-end">
+    <div className="flex flex-col gap-4">
+      <div className="surface-panel flex flex-col gap-2 p-4">
+        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+          Formato do export
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            onClick={() => setMode("combined")}
+            className={cn(
+              "h-9 rounded-md border px-3 text-[12px] font-semibold transition-colors",
+              mode === "combined"
+                ? "border-primary bg-primary-muted text-primary"
+                : "border-border bg-surface-2 text-muted-foreground hover:text-foreground"
+            )}
+          >
+            Arquivo único (Padu Studios)
+          </button>
+          <button
+            onClick={() => setMode("classic")}
+            className={cn(
+              "h-9 rounded-md border px-3 text-[12px] font-semibold transition-colors",
+              mode === "classic"
+                ? "border-primary bg-primary-muted text-primary"
+                : "border-border bg-surface-2 text-muted-foreground hover:text-foreground"
+            )}
+          >
+            Dois arquivos (SuperSaaS clássico)
+          </button>
+        </div>
+        <p className="text-[11.5px] text-muted-foreground">
+          {mode === "combined"
+            ? "Um CSV com cada agendamento e os dados do cliente na mesma linha (formato do seu export atual da agenda)."
+            : "Dois CSVs separados exportados do SuperSaaS: usuários e agendamentos."}
+        </p>
+      </div>
+
+      {mode === "combined" ? (
+        <DropCard
+          title="Agenda completa (clientes + agendamentos)"
+          hint="O mesmo arquivo alimenta o cadastro de clientes e o calendário."
+          file={clientsCsv}
+          onFile={(f) => onFile("combined", f)}
+        />
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <DropCard
+            title="Clientes / Users"
+            hint="No SuperSaaS: Supervise → Users → Export"
+            file={clientsCsv}
+            onFile={(f) => onFile("clients", f)}
+          />
+          <DropCard
+            title="Agendamentos / Reservations"
+            hint="No SuperSaaS: Reports → Appointments → Export CSV"
+            file={apptsCsv}
+            onFile={(f) => onFile("appts", f)}
+          />
+        </div>
+      )}
+
+      <div className="flex justify-end">
         <button
           onClick={onNext}
-          disabled={!clientsCsv || !apptsCsv}
+          disabled={!ready}
           className="flex h-10 items-center gap-1.5 rounded-md bg-primary px-4 text-[13px] font-semibold text-primary-foreground transition-all disabled:cursor-not-allowed disabled:opacity-40"
         >
           Continuar
