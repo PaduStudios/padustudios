@@ -657,3 +657,8 @@ function formatDatePt(iso: string): string {
   const d = parse(iso, "yyyy-MM-dd", new Date());
   return format(d, "EEE, d 'de' MMM", { locale: ptBR });
 }
+
+function toMinutes(hhmm: string): number {
+  const [h, m] = hhmm.split(":").map(Number);
+  return h * 60 + m;
+}
