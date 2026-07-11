@@ -331,34 +331,88 @@ export function ImportWizard() {
 // ── Steps ───────────────────────────────────────────────────────────────────
 
 function UploadStep({
+  mode,
+  setMode,
   clientsCsv,
   apptsCsv,
   onFile,
   onNext,
 }: {
+  mode: ImportMode;
+  setMode: (m: ImportMode) => void;
   clientsCsv: ParsedCsv | null;
   apptsCsv: ParsedCsv | null;
-  onFile: (k: "clients" | "appts", f: File) => void;
+  onFile: (k: "clients" | "appts" | "combined", f: File) => void;
   onNext: () => void;
 }) {
+  const ready =
+    mode === "combined" ? !!clientsCsv : !!clientsCsv && !!apptsCsv;
+
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      <DropCard
-        title="Clientes / Users"
-        hint="No SuperSaaS: Supervise → Users → Export"
-        file={clientsCsv}
-        onFile={(f) => onFile("clients", f)}
-      />
-      <DropCard
-        title="Agendamentos / Reservations"
-        hint="No SuperSaaS: Reports → Appointments → Export CSV"
-        file={apptsCsv}
-        onFile={(f) => onFile("appts", f)}
-      />
-      <div className="sm:col-span-2 flex justify-end">
+    <div className="flex flex-col gap-4">
+      <div className="surface-panel flex flex-col gap-2 p-4">
+        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+          Formato do export
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            onClick={() => setMode("combined")}
+            className={cn(
+              "h-9 rounded-md border px-3 text-[12px] font-semibold transition-colors",
+              mode === "combined"
+                ? "border-primary bg-primary-muted text-primary"
+                : "border-border bg-surface-2 text-muted-foreground hover:text-foreground"
+            )}
+          >
+            Arquivo único (Padu Studios)
+          </button>
+          <button
+            onClick={() => setMode("classic")}
+            className={cn(
+              "h-9 rounded-md border px-3 text-[12px] font-semibold transition-colors",
+              mode === "classic"
+                ? "border-primary bg-primary-muted text-primary"
+                : "border-border bg-surface-2 text-muted-foreground hover:text-foreground"
+            )}
+          >
+            Dois arquivos (SuperSaaS clássico)
+          </button>
+        </div>
+        <p className="text-[11.5px] text-muted-foreground">
+          {mode === "combined"
+            ? "Um CSV com cada agendamento e os dados do cliente na mesma linha (formato do seu export atual da agenda)."
+            : "Dois CSVs separados exportados do SuperSaaS: usuários e agendamentos."}
+        </p>
+      </div>
+
+      {mode === "combined" ? (
+        <DropCard
+          title="Agenda completa (clientes + agendamentos)"
+          hint="O mesmo arquivo alimenta o cadastro de clientes e o calendário."
+          file={clientsCsv}
+          onFile={(f) => onFile("combined", f)}
+        />
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <DropCard
+            title="Clientes / Users"
+            hint="No SuperSaaS: Supervise → Users → Export"
+            file={clientsCsv}
+            onFile={(f) => onFile("clients", f)}
+          />
+          <DropCard
+            title="Agendamentos / Reservations"
+            hint="No SuperSaaS: Reports → Appointments → Export CSV"
+            file={apptsCsv}
+            onFile={(f) => onFile("appts", f)}
+          />
+        </div>
+      )}
+
+      <div className="flex justify-end">
         <button
           onClick={onNext}
-          disabled={!clientsCsv || !apptsCsv}
+          disabled={!ready}
           className="flex h-10 items-center gap-1.5 rounded-md bg-primary px-4 text-[13px] font-semibold text-primary-foreground transition-all disabled:cursor-not-allowed disabled:opacity-40"
         >
           Continuar
