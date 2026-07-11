@@ -264,7 +264,11 @@ function SelectedView({
             <MessageCircle className="h-3.5 w-3.5" />
             WhatsApp
           </a>
-          <button className="grid h-9 w-9 place-items-center rounded-md border border-border bg-surface transition-colors hover:bg-surface-2" title="Editar">
+          <button
+            onClick={onEdit}
+            className="grid h-9 w-9 place-items-center rounded-md border border-border bg-surface transition-colors hover:bg-surface-2"
+            title="Editar"
+          >
             <Pencil className="h-3.5 w-3.5" />
           </button>
         </div>
