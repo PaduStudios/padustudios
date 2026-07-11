@@ -32,6 +32,7 @@ export function CalendarView() {
     date: string;
     start: string;
   } | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
