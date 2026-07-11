@@ -29,7 +29,9 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   seed: { date: string; start: string } | null;
+  editing?: Appointment | null;
   onCreated?: (a: Appointment) => void;
+  onUpdated?: (a: Appointment) => void;
 }
 
 type Step = "when" | "who";
@@ -49,7 +51,9 @@ export function NewAppointmentDialog({
   open,
   onOpenChange,
   seed,
+  editing,
   onCreated,
+  onUpdated,
 }: Props) {
   const { appointments, clients } = useStore();
   const [step, setStep] = useState<Step>("when");
@@ -74,11 +78,26 @@ export function NewAppointmentDialog({
   useEffect(() => {
     if (!open) return;
     setStep("when");
-    setDate(seed?.date ?? "");
-    setStart(seed?.start ?? "20:00");
-    setDuration(120);
-    setMode("existing");
-    setSelectedClientId("");
+    if (editing) {
+      setDate(editing.date);
+      setStart(editing.start);
+      const dur =
+        (toMinutes(editing.end) - toMinutes(editing.start) + 24 * 60) %
+          (24 * 60) || 120;
+      setDuration(dur);
+      setMode("existing");
+      setSelectedClientId(editing.clientId);
+      setRoom(editing.room ?? "Sala A");
+      setNotes(editing.notes ?? "");
+    } else {
+      setDate(seed?.date ?? "");
+      setStart(seed?.start ?? "20:00");
+      setDuration(120);
+      setMode("existing");
+      setSelectedClientId("");
+      setRoom("Sala A");
+      setNotes("");
+    }
     setClientQuery("");
     setNewClient({
       name: "",
@@ -88,16 +107,24 @@ export function NewAppointmentDialog({
       members: "",
       origin: "whatsapp",
     });
-    setRoom("Sala A");
-    setNotes("");
-  }, [open, seed]);
+  }, [open, seed, editing]);
 
   const end = useMemo(() => addMinutesToTime(start, duration), [start, duration]);
 
+  // When editing, ignore the row being edited so the same slot doesn't
+  // register as "busy against itself".
+  const otherAppointments = useMemo(
+    () =>
+      editing
+        ? appointments.filter((a) => a.id !== editing.id)
+        : appointments,
+    [appointments, editing]
+  );
+
   const availability = useMemo(() => {
     if (!date) return null;
-    return findAlternatives(appointments, { date, start, end });
-  }, [appointments, date, start, end]);
+    return findAlternatives(otherAppointments, { date, start, end });
+  }, [otherAppointments, date, start, end]);
 
   const canProceed = date && start && end && availability?.isFree;
 
@@ -144,8 +171,27 @@ export function NewAppointmentDialog({
       toast.error("Selecione um cliente");
       return;
     }
-    if (!isSlotFree(appointments, date, start, end)) {
+    if (!isSlotFree(otherAppointments, date, start, end)) {
       toast.error("Este horário acabou de ser ocupado");
+      return;
+    }
+
+    if (editing) {
+      store.updateAppointment(editing.id, {
+        clientId,
+        date,
+        start,
+        end,
+        room,
+        notes: notes.trim() || undefined,
+      });
+      const updated = store.getSnapshot().appointments.find((a) => a.id === editing.id);
+      const client = store.getSnapshot().clients.find((c) => c.id === clientId);
+      toast.success("Ensaio atualizado", {
+        description: `${client?.band || client?.name} · ${formatDatePt(date)} · ${start}–${end}`,
+      });
+      if (updated) onUpdated?.(updated);
+      onOpenChange(false);
       return;
     }
 
