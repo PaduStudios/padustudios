@@ -136,6 +136,12 @@ export function ClientsView() {
           </ul>
         </motion.div>
       </div>
+
+      <ClientEditDialog
+        client={editing}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+      />
     </>
   );
 }
