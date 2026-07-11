@@ -32,6 +32,7 @@ export function CalendarView() {
     date: string;
     start: string;
   } | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -73,6 +74,7 @@ export function CalendarView() {
   const nextFree = findNextFreeSlot(appointments);
 
   function openNew(date?: string, start?: string) {
+    setEditingId(null);
     setDialogSeed(
       date && start
         ? { date, start }
@@ -80,6 +82,16 @@ export function CalendarView() {
     );
     setDialogOpen(true);
   }
+
+  function openEdit(id: string) {
+    setEditingId(id);
+    setDialogSeed(null);
+    setDialogOpen(true);
+  }
+
+  const editing = editingId
+    ? appointments.find((a) => a.id === editingId) ?? null
+    : null;
 
   return (
     <>
@@ -152,6 +164,7 @@ export function CalendarView() {
             client={selectedClient}
             onClose={() => setSelectedId(null)}
             onNew={() => openNew()}
+            onEdit={openEdit}
             todayAppointments={todayAppointments
               .slice()
               .sort((a, b) => a.start.localeCompare(b.start))}
@@ -173,6 +186,7 @@ export function CalendarView() {
                 client={selectedClient}
                 onClose={() => setSelectedId(null)}
                 onNew={() => openNew()}
+                onEdit={openEdit}
                 todayAppointments={todayAppointments
                   .slice()
                   .sort((a, b) => a.start.localeCompare(b.start))}
@@ -186,9 +200,14 @@ export function CalendarView() {
 
       <NewAppointmentDialog
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) setEditingId(null);
+        }}
         seed={dialogSeed}
+        editing={editing}
         onCreated={(a) => setSelectedId(a.id)}
+        onUpdated={(a) => setSelectedId(a.id)}
       />
     </>
   );
