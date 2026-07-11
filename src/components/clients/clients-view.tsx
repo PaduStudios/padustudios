@@ -3,6 +3,8 @@ import { motion } from "framer-motion";
 import { Search, Users, MessageCircle, Phone } from "lucide-react";
 import { useStore } from "@/hooks/use-store";
 import { cn } from "@/lib/utils";
+import { ClientEditDialog } from "./client-edit-dialog";
+import type { Client } from "@/lib/scheduling/types";
 
 export function ClientsView() {
   const { clients, appointments } = useStore();

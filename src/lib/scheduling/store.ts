@@ -222,6 +222,16 @@ export const store = {
     const norm = phone.replace(/\D/g, "");
     return state.clients.find((c) => c.phone.replace(/\D/g, "") === norm);
   },
+  updateClient(id: string, patch: Partial<Omit<Client, "id" | "createdAt">>) {
+    const now = new Date().toISOString();
+    state = {
+      ...state,
+      clients: state.clients.map((c) =>
+        c.id === id ? { ...c, ...patch, updatedAt: now } : c
+      ),
+    };
+    persist();
+  },
   deleteClient(id: string) {
     state = {
       ...state,
