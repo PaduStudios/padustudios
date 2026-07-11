@@ -76,13 +76,12 @@ export function buildClientPlan(
       skipped.push({ row: rowNum, reason: `"${name}" sem telefone` });
       return;
     }
-    if (seenInBatch.has(phone)) {
-      skipped.push({ row: rowNum, reason: `Telefone duplicado no CSV: ${phone}` });
-      return;
-    }
+    // In combined mode the same phone appears on every row of that client — silently skip dupes.
+    if (seenInBatch.has(phone)) return;
     seenInBatch.add(phone);
 
     const email = pickCell(row, mapping.email) || undefined;
+    const cpf = normalizeCpf(pickCell(row, mapping.cpf)) || undefined;
     const band = pickCell(row, mapping.band) || undefined;
     const membersRaw = pickCell(row, mapping.members);
     const members = membersRaw ? Number(membersRaw) || undefined : undefined;
@@ -92,6 +91,7 @@ export function buildClientPlan(
     if (existingClient) {
       const patch: Partial<Client> = {};
       if (!existingClient.email && email) patch.email = email;
+      if (!existingClient.cpf && cpf) patch.cpf = cpf;
       if (!existingClient.band && band) patch.band = band;
       if (!existingClient.members && members) patch.members = members;
       if (!existingClient.notes && notes) patch.notes = notes;
@@ -105,6 +105,7 @@ export function buildClientPlan(
       name: name || phoneRaw || phone,
       phone: phoneRaw || phone,
       email,
+      cpf,
       band,
       members,
       origin: options.defaultOrigin,
