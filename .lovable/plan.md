@@ -1,98 +1,68 @@
-## Objetivo
+## Diagnóstico do seu CSV
 
-Trazer do SuperSaaS via CSV:
-1. **Cadastro de clientes/bandas** → tabela `clients`
-2. **Agendamentos passados (histórico)** → tabela `appointments`
+O arquivo `Agenda_Padu_Studios.csv` **não** segue o formato "padrão" do SuperSaaS (users.csv + appointments.csv separados) que o wizard atual espera. É um export único com **273 linhas** onde cada linha é 1 agendamento + os dados do cliente denormalizados.
 
-## Por que CSV
+**Colunas detectadas:**
+| Coluna do CSV | Vai virar |
+|---|---|
+| `Agenda Padu Studios` (Sala A / Gravação) | `appointment.room` |
+| `Horário de início` (`DD/MM/YYYY   HH:MM`) | `appointment.date` + `appointment.start` |
+| `Horário de fim` (`DD/MM/YYYY   HH:MM`) | `appointment.end` |
+| `Descrição` | `appointment.notes` |
+| `Nome completo` | `client.name` |
+| `E-mail` | `client.email` |
+| `Celular` | `client.phone` (chave de dedup) |
+| `CPF` | `client.cpf` (descarta lixo tipo "00000") |
+| `Nome da Banda` | `client.band` |
+| `Estado` (`Aprovado` / `Aprovação pendente`) | `appointment.status` (`confirmed` / `pending`) |
+| `Criado em` / `Atualizado em` / `Criado por` / `Atualizado por` | ignorados (metadados) |
 
-- Formato bruto, sem HTML/estilos: cada linha vira 1 registro, sem parsing frágil.
-- SuperSaaS exporta CSV nativamente em **Supervise → Users** (para clientes) e em **Reports → Appointments/Usage report** (para agendamentos). É o mesmo caminho pros planos pagos e o trial.
-- XLS/HTML só compensariam se o CSV não estivesse disponível — não é o seu caso.
+**Estatísticas:** 248 em Sala A, 25 em Gravação · 267 Aprovado, 6 Pendente · ~147 clientes únicos por telefone · 175 linhas sem banda (só nome pessoal) · 3 sem email.
 
-## Como vai funcionar no app
+## Problemas do parser atual que precisam ser resolvidos
 
-Uma nova tela **Configurações → Importar do SuperSaaS** com 3 passos:
+1. **Modo de arquivo único.** O wizard hoje pede 2 arquivos. Preciso adicionar modo "arquivo único combinado" onde o mesmo CSV alimenta clientes E agendamentos.
+2. **Data + hora na mesma célula** com múltiplos espaços (`11/10/2025   14:00`). Parser atual espera `date` e `start` em colunas separadas.
+3. **Telefones com caracteres invisíveis** (U+202A/U+202C bidi marks, U+2011 hifen não-quebrável). Ex: `‪+55 11 94900‑4009‬`. `normalizePhone` atual só remove `\D` no ASCII — precisa strip Unicode invisível antes.
+4. **Agendamentos que cruzam meia-noite** (ex.: `21/10 20:00 → 22/10 00:00`). Modelo atual é single-day. Vou cortar em `23:59` na data de início e registrar aviso (5-6 linhas assim).
+5. **CPFs lixo** (`00000`, `0000000`) devem virar campo vazio.
+6. **Status** `Aprovado` (com espaços extras) → `confirmed`; `Aprovação pendente` → `pending`.
 
-### Passo 1 — Upload dos dois CSVs
-- Dois campos de upload:
-  - `users.csv` (cadastro)
-  - `appointments.csv` (histórico de ensaios)
-- O app lê os arquivos no navegador (nada sai do computador do usuário até confirmar).
+## O que muda no código
 
-### Passo 2 — Mapeamento de colunas + prévia
-Os nomes de coluna do SuperSaaS variam de acordo com a configuração da agenda, então o app mostra um preview das 5 primeiras linhas e deixa você mapear cada coluna:
+**Editar** `src/lib/import/supersaas-csv.ts`:
+- `normalizePhone`: strip Unicode invisíveis/bidi antes do `\D`.
+- Nova função `parseCombinedDateTime("DD/MM/YYYY   HH:MM")` → `{date, time}`.
+- Novo hint set `PADU_COMBINED_HINTS` com as colunas em português acima.
+- Novo normalizador de status incluindo "aprovado"/"aprovação pendente".
+- Filtro de CPF: descarta se só tiver zeros ou < 11 dígitos.
 
-Para **clientes**:
-```
-CSV do SuperSaaS         →   Campo Padu OS
-------------------------      ----------------
-Full name                →   name
-Phone / Mobile           →   phone   (obrigatório — é a chave de dedupe)
-Email                    →   email
-Company / Band           →   band
-[custom field]           →   members
-Sign-up source           →   origin
-Notes                    →   notes
-Sign-up date             →   createdAt
-```
+**Editar** `src/lib/import/index.ts`:
+- Novo orchestrator `importCombinedCsv(rows, mapping)` que:
+  1. Deriva clientes deduplicados por telefone normalizado (fallback email→nome).
+  2. Cria appointments referenciando o clientId.
+  3. Trata cross-midnight (corta em 23:59 + adiciona nota).
+  4. Devolve o mesmo relatório de sucesso/skipped.
 
-Para **agendamentos**:
-```
-CSV do SuperSaaS         →   Campo Padu OS
-------------------------      ----------------
-User / Full name         →   (usado pra achar o cliente por nome + telefone)
-Phone                    →   (fallback pra achar o cliente)
-Date                     →   date   (aceita dd/mm/yyyy, yyyy-mm-dd, mm/dd/yyyy)
-Start time               →   start  (HH:mm)
-End time / Duration      →   end    (calcula se só vier duração)
-Resource / Schedule      →   room
-Price                    →   price
-Payment                  →   payment_method
-Status                   →   status (mapeia: paid/booked → confirmed, cancelled → cancelled, etc.)
-Comment / Notes          →   notes
-```
+**Editar** `src/components/import/import-wizard.tsx`:
+- Passo 1 ganha toggle: **"Arquivo único (Padu Studios)"** vs **"Dois arquivos (SuperSaaS clássico)"**. Default no arquivo único.
+- Passo 2 mostra os campos combinados numa coluna só quando em modo único.
+- Preview do passo 3 continua igual (novos clientes / existentes / agendamentos / descartados).
 
-O mapeamento é salvo em localStorage pra você não refazer numa reimportação.
+**Sem mudança em:** store, tipos, telas de calendário, cadastro.
 
-### Passo 3 — Preview + confirmação
-Mostra um resumo:
-- N clientes novos, M clientes já existentes (dedupe por telefone normalizado — só dígitos)
-- N agendamentos importados, X descartados (sem cliente correspondente ou data inválida)
-- Lista dos descartados com o motivo, exportável em CSV pra corrigir manualmente
-- Botão **Importar tudo**
+## Depois de implementar, o que faço
 
-### Regras de import
+1. Rodo o parser contra o seu CSV via um teste rápido no sandbox e te reporto:
+   - Nº de clientes criados vs esperado (~147)
+   - Nº de agendamentos importados vs 273
+   - Lista de descartados com o motivo (se houver)
+2. Se estiver ok, você mesmo faz o upload em **Configurações → Importar** e confirma no browser.
 
-- **Dedupe de clientes**: pelo telefone normalizado (`replace(/\D/g, '')`). Se já existir, atualiza campos vazios; nunca sobrescreve dados existentes.
-- **Agendamentos → cliente**: procura primeiro por telefone; se não achar, por nome exato (case-insensitive). Se falhar os dois, marca como descartado.
-- **Status padrão**: importados como `confirmed` (pra histórico), exceto se o CSV explicitamente marcar cancelado.
-- **Datas passadas**: mantidas como estão — aparecem no calendário nas semanas correspondentes ao rolar pra trás.
+## Fora do escopo
 
-## Onde os dados vão parar (importante)
+- Migrar store para Lovable Cloud (fica para outro passo — o import primeiro popula localStorage, depois migramos tudo junto).
+- Importar leads/aprovações pendentes como fila separada (todas viram appointments com status `pending`).
+- Reconstruir agendamentos cross-midnight como dois eventos (corta em 23:59 por ora).
 
-Hoje o app ainda usa **localStorage** (mock store). Ou seja: o import vai popular seu navegador. Vantagens:
-- Rápido, sem back-end, você já testa hoje.
-- Se apagar o cache do navegador, perde. Reimporta.
-
-Quando você me pedir pra plugar o Lovable Cloud (tabelas `clients` e `appointments` já existem no Supabase), a mesma tela de import passa a escrever no banco em vez do localStorage — **sem mudar a UI de import**, só troca o `store.addClient`/`store.addAppointment` pela versão Supabase. O CSV que você usar hoje continua servindo.
-
-## O que preciso de você antes de codar
-
-1. **Confirmar o caminho acima** — CSV via tela de import no app.
-2. **Um CSV de exemplo do SuperSaaS** (pode ser só as primeiras linhas, com nomes ou dados de teste) pra eu:
-   - Já deixar o auto-mapping pré-preenchido com os nomes exatos das colunas que o SuperSaaS usa na sua conta
-   - Testar o parser com datas/horários no formato real
-3. **Decisão sobre `origin`**: SuperSaaS não tem esse conceito. Trato tudo como `other`, ou você quer setar um valor fixo (ex.: `supersaas`) pra rastrear a origem da importação?
-
-## Arquivos que vou criar (na fase build)
-
-- `src/routes/_shell.settings.import.tsx` — rota da tela de import
-- `src/components/import/import-wizard.tsx` — wizard de 3 passos
-- `src/components/import/csv-preview.tsx` — tabela de preview
-- `src/components/import/column-mapper.tsx` — UI de mapeamento
-- `src/lib/import/supersaas-csv.ts` — parser + normalização (datas BR/US, telefones, status)
-- `src/lib/import/index.ts` — orquestrador (dedupe, aplicação no store)
-- Link no menu lateral: **Configurações → Importar**
-
-Sem alterações no Supabase agora — só front-end + mock store.
+Pode aprovar?
