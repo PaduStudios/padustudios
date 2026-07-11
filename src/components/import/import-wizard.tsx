@@ -264,6 +264,8 @@ export function ImportWizard() {
 
       {step === "upload" && (
         <UploadStep
+          mode={mode}
+          setMode={setMode}
           clientsCsv={clientsCsv}
           apptsCsv={apptsCsv}
           onFile={handleFile}
