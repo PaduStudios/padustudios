@@ -102,9 +102,12 @@ function SelectedView({
 
   const whatsappUrl = `https://wa.me/${client.phone.replace(/\D/g, "")}`;
 
-  function cancel() {
-    store.updateAppointment(appointment.id, { status: "cancelled" });
-    toast.success("Agendamento cancelado", {
+  function remove() {
+    if (!window.confirm(`Excluir o ensaio de ${client.band || client.name} em ${appointment.start}? Esta ação não pode ser desfeita.`)) {
+      return;
+    }
+    store.deleteAppointment(appointment.id);
+    toast.success("Ensaio excluído", {
       description: `${client.band || client.name} · ${appointment.start}`,
     });
     onClose();
@@ -245,25 +248,27 @@ function SelectedView({
       </div>
 
       {/* Sticky footer actions */}
-      <div className="grid shrink-0 grid-cols-[1fr_auto_auto] gap-2 border-t border-border bg-surface/60 p-3 backdrop-blur">
-        <a
-          href={whatsappUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="flex h-9 items-center justify-center gap-1.5 rounded-md bg-primary text-[12.5px] font-semibold text-primary-foreground transition-transform active:scale-[0.98]"
-        >
-          <MessageCircle className="h-3.5 w-3.5" />
-          WhatsApp
-        </a>
-        <button className="grid h-9 w-9 place-items-center rounded-md border border-border bg-surface transition-colors hover:bg-surface-2" title="Editar">
-          <Pencil className="h-3.5 w-3.5" />
-        </button>
+      <div className="flex shrink-0 flex-col gap-2 border-t border-border bg-surface/60 p-3 backdrop-blur">
+        <div className="grid grid-cols-[1fr_auto] gap-2">
+          <a
+            href={whatsappUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="flex h-9 items-center justify-center gap-1.5 rounded-md bg-primary text-[12.5px] font-semibold text-primary-foreground transition-transform active:scale-[0.98]"
+          >
+            <MessageCircle className="h-3.5 w-3.5" />
+            WhatsApp
+          </a>
+          <button className="grid h-9 w-9 place-items-center rounded-md border border-border bg-surface transition-colors hover:bg-surface-2" title="Editar">
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+        </div>
         <button
-          onClick={cancel}
-          className="grid h-9 w-9 place-items-center rounded-md border border-border bg-surface transition-colors hover:border-primary/40 hover:bg-primary/10 hover:text-primary"
-          title="Cancelar"
+          onClick={remove}
+          className="flex h-9 items-center justify-center gap-1.5 rounded-md border border-destructive/40 bg-destructive/10 text-[12.5px] font-semibold text-destructive transition-colors hover:bg-destructive/20"
         >
           <Trash2 className="h-3.5 w-3.5" />
+          Excluir ensaio
         </button>
       </div>
     </motion.div>

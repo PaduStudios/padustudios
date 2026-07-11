@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { addWeeks, format, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { AnimatePresence, motion } from "framer-motion";
@@ -24,13 +24,18 @@ import { cn } from "@/lib/utils";
 
 export function CalendarView() {
   const { appointments, clients } = useStore();
-  const [anchor, setAnchor] = useState<Date>(new Date());
+  const [mounted, setMounted] = useState(false);
+  const [anchor, setAnchor] = useState<Date>(() => new Date());
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogSeed, setDialogSeed] = useState<{
     date: string;
     start: string;
   } | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const days = useMemo(() => weekDays(anchor), [anchor]);
   const rangeLabel = useMemo(() => {
@@ -117,8 +122,8 @@ export function CalendarView() {
             <MetricCard
               icon={Clock}
               label="Próximo horário livre"
-              value={nextFree ? nextFree.start : "—"}
-              hint={nextFree ? nextFree.dayLabel : "Sem janelas nesta semana"}
+              value={mounted && nextFree ? nextFree.start : "—"}
+              hint={mounted ? (nextFree ? nextFree.dayLabel : "Sem janelas nesta semana") : " "}
               accent
             />
           </motion.div>
