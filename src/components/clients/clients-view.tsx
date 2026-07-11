@@ -75,8 +75,9 @@ export function ClientsView() {
               return (
                 <li
                   key={c.id}
+                  onClick={() => openEdit(c)}
                   className={cn(
-                    "grid grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)_minmax(0,1fr)_100px_120px] items-center gap-2 border-b border-border px-5 py-3.5 text-[13px] transition-colors last:border-b-0 hover:bg-surface-2/50",
+                    "grid cursor-pointer grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)_minmax(0,1fr)_100px_120px] items-center gap-2 border-b border-border px-5 py-3.5 text-[13px] transition-colors last:border-b-0 hover:bg-surface-2/50",
                     i % 2 === 1 && "bg-surface-2/20"
                   )}
                 >
@@ -103,7 +104,10 @@ export function ClientsView() {
                     <Users className="h-3 w-3 text-muted-foreground" />
                     {count}
                   </span>
-                  <div className="flex items-center justify-end gap-1">
+                  <div
+                    className="flex items-center justify-end gap-1"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <a
                       href={`https://wa.me/${c.phone.replace(/\D/g, "")}`}
                       target="_blank"
