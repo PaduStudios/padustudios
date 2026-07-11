@@ -9,7 +9,9 @@ import {
   addMinutes,
   mapOrigin,
   mapStatus,
+  normalizeCpf,
   normalizePhone,
+  parseCombinedDateTime,
   parseDate,
   parseDurationMinutes,
   parsePrice,
@@ -27,6 +29,8 @@ export interface AppointmentMapping
 export interface ImportOptions {
   dateLocale: "br" | "us" | "iso";
   defaultOrigin: ClientOrigin;
+  /** When true, `start` / `end` cells contain a combined "DD/MM/YYYY HH:MM" value. */
+  combinedDateTime?: boolean;
 }
 
 export interface ClientImportPlan {
