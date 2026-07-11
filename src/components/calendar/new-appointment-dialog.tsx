@@ -526,7 +526,7 @@ export function NewAppointmentDialog({
               style={{ boxShadow: "var(--shadow-glow)" }}
             >
               <Check className="h-3.5 w-3.5" />
-              Confirmar agendamento
+              {editing ? "Salvar alterações" : "Confirmar agendamento"}
             </button>
           )}
         </div>
