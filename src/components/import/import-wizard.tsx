@@ -89,8 +89,11 @@ function persist(saved: SavedMappings) {
   window.localStorage.setItem(MAPPING_STORAGE_KEY, JSON.stringify(saved));
 }
 
+type ImportMode = "combined" | "classic";
+
 export function ImportWizard() {
   const [step, setStep] = useState<Step>("upload");
+  const [mode, setMode] = useState<ImportMode>("combined");
   const [clientsCsv, setClientsCsv] = useState<ParsedCsv | null>(null);
   const [apptsCsv, setApptsCsv] = useState<ParsedCsv | null>(null);
 
@@ -109,6 +112,8 @@ export function ImportWizard() {
     saved.defaultOrigin ?? "other"
   );
 
+  const combinedDateTime = mode === "combined";
+
   const clientPlan = useMemo<ClientImportPlan | null>(() => {
     if (!clientsCsv) return null;
     return buildClientPlan(clientsCsv.rows, clientMapping, {
@@ -122,12 +127,12 @@ export function ImportWizard() {
     return buildAppointmentPlan(
       apptsCsv.rows,
       apptMapping,
-      { dateLocale, defaultOrigin },
+      { dateLocale, defaultOrigin, combinedDateTime },
       clientPlan.toCreate
     );
-  }, [apptsCsv, apptMapping, clientPlan, dateLocale, defaultOrigin]);
+  }, [apptsCsv, apptMapping, clientPlan, dateLocale, defaultOrigin, combinedDateTime]);
 
-  async function handleFile(kind: "clients" | "appts", file: File) {
+  async function handleFile(kind: "clients" | "appts" | "combined", file: File) {
     const text = await file.text();
     const result = Papa.parse<CsvRow>(text, {
       header: true,
@@ -146,10 +151,19 @@ export function ImportWizard() {
         Object.values(r).some((v) => v && String(v).trim())
       ),
     };
-    if (kind === "clients") {
+    if (kind === "combined") {
+      setClientsCsv(parsed);
+      setApptsCsv(parsed);
+      const autoClient = autoMapColumns(parsed.headers, CLIENT_FIELD_HINTS);
+      const autoAppt = autoMapColumns(parsed.headers, APPOINTMENT_FIELD_HINTS);
+      // In combined mode, `date` isn't a separate column — mirror it to `start`
+      // so validation passes; buildAppointmentPlan will derive the date from the start cell.
+      if (autoAppt.start && !autoAppt.date) autoAppt.date = autoAppt.start;
+      setClientMapping(overlayMapping(autoClient, saved.clients, parsed.headers));
+      setApptMapping(overlayMapping(autoAppt, saved.appointments, parsed.headers));
+    } else if (kind === "clients") {
       setClientsCsv(parsed);
       const auto = autoMapColumns(parsed.headers, CLIENT_FIELD_HINTS);
-      // overlay any saved mapping (only if header still exists)
       const overlaid = overlayMapping(auto, saved.clients, parsed.headers);
       setClientMapping(overlaid);
     } else {
@@ -161,7 +175,12 @@ export function ImportWizard() {
   }
 
   function goToMap() {
-    if (!clientsCsv || !apptsCsv) {
+    if (mode === "combined") {
+      if (!clientsCsv) {
+        toast.error("Envie o CSV antes de continuar");
+        return;
+      }
+    } else if (!clientsCsv || !apptsCsv) {
       toast.error("Envie os dois arquivos CSV antes de continuar");
       return;
     }
@@ -173,9 +192,17 @@ export function ImportWizard() {
       toast.error("Mapeie a coluna de telefone dos clientes");
       return;
     }
-    if (!apptMapping.date || !apptMapping.start) {
-      toast.error("Mapeie ao menos data e horário de início dos ensaios");
+    if (!apptMapping.start) {
+      toast.error("Mapeie ao menos o horário de início dos ensaios");
       return;
+    }
+    if (!combinedDateTime && !apptMapping.date) {
+      toast.error("Mapeie a coluna de data dos ensaios");
+      return;
+    }
+    // Mirror date→start in combined mode so downstream code has a value.
+    if (combinedDateTime && apptMapping.start && !apptMapping.date) {
+      setApptMapping({ ...apptMapping, date: apptMapping.start });
     }
     persist({
       clients: cleanMapping(clientMapping),
