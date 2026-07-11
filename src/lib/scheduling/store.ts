@@ -198,7 +198,7 @@ export const store = {
     return state;
   },
   getServerSnapshot(): StoreShape {
-    return seed();
+    return serverSnapshot;
   },
   reset() {
     state = seed();
