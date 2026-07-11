@@ -192,7 +192,7 @@ function DayColumn({
   return (
     <div
       className={cn(
-        "relative border-r border-border last:border-r-0",
+        "relative",
         today && "bg-primary-muted/25"
       )}
       onClick={(e) => {
