@@ -1,39 +1,36 @@
-# Ajustes — Calendário & Clientes
+## Objetivo
 
-## Página Calendário
+Tornar o backend independente do Lovable Cloud, versionando schema e configuração no Git para poder migrar/rodar em qualquer provedor Postgres (Supabase self-hosted, Neon, Railway, RDS, etc).
 
-### 1. Alinhamento das linhas verticais
-No `week-grid.tsx` o header usa `grid-cols-[64px_repeat(7,...)]` e o corpo também, mas as colunas do corpo têm `border-r` enquanto o header tem `border-r` em cada célula com padding interno diferente — as bordas ficam levemente deslocadas em relação ao título da coluna.
+## O que fica no Git
 
-**Fix:** unificar o tratamento de bordas — remover `border-r` das células individuais e desenhar as linhas verticais como um único overlay absoluto sobre a grid inteira (header + corpo compartilhando as mesmas guidelines). Isso garante alinhamento pixel-perfect entre cabeçalho e corpo.
+1. **`supabase/migrations/`** — pasta versionada com todo o SQL do schema atual (tabelas `clients`, `appointments`, policies, grants, função `update_updated_at_column`, triggers). Hoje as migrations rodam pelo tool do Lovable e não estão no repo — vou exportá-las para arquivos `.sql` numerados.
+2. **`supabase/config.toml`** — já existe, mantido no repo.
+3. **`supabase/seed.sql`** (opcional) — dados de exemplo para bootstrap local.
+4. **`.env.example`** — documentando `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `VITE_SUPABASE_*` sem valores reais.
+5. **`README-backend.md`** — instruções de como:
+   - Rodar Postgres/Supabase localmente (`supabase start` ou Docker Compose)
+   - Aplicar migrations (`supabase db push` ou `psql -f`)
+   - Configurar variáveis de ambiente apontando para outro backend
 
-### 2. Duração como dropdown (1h → 12h)
-Hoje o campo "Duração" no `new-appointment-dialog.tsx` é uma lista de chips com valores fixos (60, 90, 120, 180, 240 min).
+## O que NÃO muda no código
 
-**Fix:** substituir por um `<select>` (nativo, estilizado com o tema) com opções de 1h a 12h em incrementos de 1 hora (1h, 2h, 3h, …, 12h). Mantém o cálculo de `end` e a mensagem "Termina às HH:MM".
+O código da app já usa `@supabase/supabase-js` com URL + chave via env vars. Isso significa que apontar para outro Postgres com PostgREST/Supabase compatível é só trocar `.env` — nenhum refactor de componente necessário.
 
-### 3. Clicar no ensaio + botão excluir
-Clicar no bloco do ensaio já abre o `DetailsPanel` lateral (funcional). Falta um botão de **excluir de verdade** — hoje só existe um botão "Cancelar" que muda o status para `cancelled`.
+## Limitações a deixar claras
 
-**Fix:** adicionar botão "Excluir ensaio" no rodapé do `DetailsPanel`, com confirmação (`window.confirm` ou AlertDialog do shadcn). Ação chama `store.deleteAppointment(id)` e fecha o painel. O botão atual de cancelar pode permanecer como ação secundária, ou ser substituído — proposta: manter apenas "Excluir" (remoção definitiva) já que o usuário pediu exclusão.
+- **Dados**: registros existentes ficam no Lovable Cloud. Para migrar, exporta via Cloud → Advanced settings → Export data e importa no destino.
+- **Auth**: se usar Supabase Auth self-hosted, precisa reconfigurar providers (Google OAuth etc).
+- **Enquanto continuar no Lovable**: mudanças de schema feitas pelo tool do Lovable também precisam ser espelhadas nos arquivos `.sql` do repo (ou passar a criar as migrations manualmente e aplicar via CLI).
 
-## Página Clientes
+## Passos de implementação
 
-### 4. Clicar no cliente abre modal de edição + excluir
-Hoje a linha do cliente só tem ícones de WhatsApp/telefone à direita, sem edição.
+1. Ler o schema atual via `supabase--read_query` no `information_schema` para gerar SQL fiel de `clients`, `appointments`, policies e grants.
+2. Criar `supabase/migrations/0001_init.sql` com todo o schema.
+3. Criar `.env.example` e `README-backend.md`.
+4. Confirmar que build continua passando (sem mudanças de código de app).
 
-**Fix:** tornar a linha inteira clicável (exceto os ícones de ação) e abrir um `Dialog` com formulário de edição contendo: nome, telefone, email, banda, integrantes, origem, observações. Rodapé do modal com dois botões: **Salvar** (chama `store` — precisa de novo método `updateClient`) e **Excluir cliente** (com confirmação, chama `store.deleteClient` que já existe).
+## Perguntas antes de executar
 
-## Arquivos afetados
-
-- `src/components/calendar/week-grid.tsx` — refatorar bordas para overlay único
-- `src/components/calendar/new-appointment-dialog.tsx` — trocar chips por `<select>` com 1h–12h
-- `src/components/calendar/details-panel.tsx` — botão "Excluir" com confirmação
-- `src/components/clients/clients-view.tsx` — linha clicável abrindo modal
-- `src/components/clients/client-edit-dialog.tsx` — **novo** modal de edição/exclusão
-- `src/lib/scheduling/store.ts` — adicionar `updateClient(id, patch)`
-
-## Notas técnicas
-
-- Exclusão usa `window.confirm` para simplicidade (podemos trocar por `AlertDialog` do shadcn se preferir uma UX mais polida).
-- O erro de hidratação nos runtime errors (métrica "Próximo horário") é bug separado — vou corrigir junto silenciosamente calculando o valor após hidratação.
+- Você quer **continuar usando Lovable Cloud como backend ativo** e apenas ter o schema versionado como "plano B" de portabilidade? Ou quer **migrar agora** para outro provedor (Supabase self-hosted, Neon, etc)?
+- Se migrar agora: qual destino?
