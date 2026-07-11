@@ -189,6 +189,8 @@ function persist() {
   emit();
 }
 
+const serverSnapshot: StoreShape = seed();
+
 export const store = {
   subscribe(fn: () => void) {
     listeners.add(fn);
@@ -198,7 +200,7 @@ export const store = {
     return state;
   },
   getServerSnapshot(): StoreShape {
-    return seed();
+    return serverSnapshot;
   },
   reset() {
     state = seed();

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   DAY_END_HOUR,
@@ -180,11 +180,14 @@ function DayColumn({
   onSelect: (id: string) => void;
   onEmptyClick: (date: string, start: string) => void;
 }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const now = new Date();
   const currentIso = toISODate(now);
   const currentMinFromStart =
     now.getHours() * 60 + now.getMinutes() - DAY_START_HOUR * 60;
   const showNowLine =
+    mounted &&
     iso === currentIso &&
     currentMinFromStart >= 0 &&
     currentMinFromStart <= HOURS * 60;
