@@ -158,21 +158,52 @@ export function buildAppointmentPlan(
   rows.forEach((row, idx) => {
     const rowNum = idx + 2;
 
-    const dateRaw = pickCell(row, mapping.date);
-    const date = parseDate(dateRaw, options.dateLocale);
-    if (!date) {
-      skipped.push({ row: rowNum, reason: `Data inválida: "${dateRaw}"` });
-      return;
+    let date: string | null = null;
+    let start: string | null = null;
+    let end: string | null = null;
+    let crossedMidnight = false;
+
+    if (options.combinedDateTime) {
+      const startRaw = pickCell(row, mapping.start);
+      const parsedStart = parseCombinedDateTime(startRaw, options.dateLocale);
+      if (!parsedStart) {
+        skipped.push({ row: rowNum, reason: `Início inválido: "${startRaw}"` });
+        return;
+      }
+      date = parsedStart.date;
+      start = parsedStart.time;
+
+      const endRaw = pickCell(row, mapping.end);
+      const parsedEnd = parseCombinedDateTime(endRaw, options.dateLocale);
+      if (parsedEnd) {
+        if (parsedEnd.date !== date) {
+          // Cross-midnight — cap at end of day and flag in notes below.
+          end = "23:59";
+          crossedMidnight = true;
+        } else {
+          end = parsedEnd.time;
+        }
+      }
+    } else {
+      const dateRaw = pickCell(row, mapping.date);
+      date = parseDate(dateRaw, options.dateLocale);
+      if (!date) {
+        skipped.push({ row: rowNum, reason: `Data inválida: "${dateRaw}"` });
+        return;
+      }
+      const startRaw = pickCell(row, mapping.start);
+      start = parseTime(startRaw);
+      if (!start) {
+        skipped.push({ row: rowNum, reason: `Horário inválido: "${startRaw}"` });
+        return;
+      }
+      end = parseTime(pickCell(row, mapping.end));
     }
 
-    const startRaw = pickCell(row, mapping.start);
-    const start = parseTime(startRaw);
     if (!start) {
-      skipped.push({ row: rowNum, reason: `Horário inválido: "${startRaw}"` });
+      skipped.push({ row: rowNum, reason: `Sem horário de início` });
       return;
     }
-
-    let end = parseTime(pickCell(row, mapping.end));
     if (!end) {
       const dur = parseDurationMinutes(pickCell(row, mapping.duration));
       if (dur) end = addMinutes(start, dur);
