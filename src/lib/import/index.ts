@@ -231,6 +231,12 @@ export function buildAppointmentPlan(
       return;
     }
 
+    const baseNotes = pickCell(row, mapping.notes) || "";
+    const notes =
+      (crossedMidnight
+        ? (baseNotes ? baseNotes + " • " : "") + "(passou da meia-noite — fim ajustado para 23:59)"
+        : baseNotes) || undefined;
+
     toCreate.push({
       _clientKey: clientKey,
       clientId: "", // resolved at commit
@@ -241,7 +247,7 @@ export function buildAppointmentPlan(
       room: pickCell(row, mapping.room) || undefined,
       price: parsePrice(pickCell(row, mapping.price)),
       paymentMethod: pickCell(row, mapping.payment) || undefined,
-      notes: pickCell(row, mapping.notes) || undefined,
+      notes,
     });
   });
 
