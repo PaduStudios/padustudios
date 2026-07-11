@@ -218,7 +218,9 @@ export function NewAppointmentDialog({
         className="max-w-lg gap-0 overflow-hidden border-border-strong bg-surface p-0"
         style={{ boxShadow: "0 24px 80px -20px rgba(0,0,0,0.6)" }}
       >
-        <DialogTitle className="sr-only">Novo agendamento</DialogTitle>
+        <DialogTitle className="sr-only">
+          {editing ? "Editar agendamento" : "Novo agendamento"}
+        </DialogTitle>
 
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
@@ -231,10 +233,10 @@ export function NewAppointmentDialog({
             </div>
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
-                Padu OS · Agendamento
+                Padu OS · {editing ? "Editar ensaio" : "Agendamento"}
               </p>
               <p className="text-[14px] font-semibold">
-                {step === "when" ? "Escolha data e horário" : "Quem vai ensaiar?"}
+                {step === "when" ? "Data e horário" : "Quem vai ensaiar?"}
               </p>
             </div>
           </div>
