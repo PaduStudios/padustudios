@@ -48,6 +48,21 @@ export interface Lead {
   createdAt: string;
 }
 
+export type FinanceKind = "income" | "expense";
+
+/** Manual finance ledger entry (things outside the calendar: aluguel, gear, etc.). */
+export interface FinanceEntry {
+  id: string;
+  kind: FinanceKind;
+  /** Free-form category label; UI presets: aluguel, equipamento, marketing, outras entradas, outros. */
+  category: string;
+  amount: number;
+  /** ISO date (yyyy-mm-dd). */
+  date: string;
+  description?: string;
+  createdAt: string;
+}
+
 /** A single slot suggestion produced by the smart availability engine. */
 export interface SlotSuggestion {
   date: string;
