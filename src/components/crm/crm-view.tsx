@@ -10,14 +10,19 @@ import {
   Calendar,
   Clock,
   Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import { useStore } from "@/hooks/use-store";
 import { store } from "@/lib/scheduling/store";
 import { cn } from "@/lib/utils";
 import type { Lead } from "@/lib/scheduling/types";
 
-type Tab = "pipeline" | "clientes";
+type Tab = "pipeline" | "clientes" | "churn";
 type LeadStatus = Lead["status"];
+
+/** Churn rule: ≥3 confirmed appointments and no visit in the last N days. */
+const CHURN_MIN_APPTS = 3;
+const CHURN_DAYS_INACTIVE = 30;
 
 const COLUMNS: { key: LeadStatus; label: string; accent: string }[] = [
   { key: "open",      label: "Abertos",     accent: "text-primary border-primary/30" },
