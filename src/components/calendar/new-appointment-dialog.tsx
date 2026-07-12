@@ -386,6 +386,33 @@ export function NewAppointmentDialog({
                 </p>
               </Field>
 
+              <Field label="Desconto (%)">
+                <div className="relative">
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    max={100}
+                    step="1"
+                    value={discount}
+                    onChange={(e) => setDiscount(e.target.value)}
+                    placeholder="0"
+                    className="h-10 w-full rounded-md border border-border bg-surface-2 pr-8 pl-3 font-mono text-[13px] font-medium outline-none focus:border-primary/50"
+                  />
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 font-mono text-[12px] text-muted-foreground">
+                    %
+                  </span>
+                </div>
+                {discountPct > 0 && basePrice > 0 && (
+                  <p className="mt-1.5 text-[11px] text-muted-foreground">
+                    Valor final: <span className="font-mono font-semibold text-foreground">R$ {finalPrice.toFixed(2)}</span>{" "}
+                    (desconto de R$ {(basePrice - finalPrice).toFixed(2)})
+                  </p>
+                )}
+              </Field>
+
+
+
 
               {/* Availability feedback */}
               {date && availability && (
