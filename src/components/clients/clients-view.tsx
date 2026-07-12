@@ -123,7 +123,7 @@ export function ClientsView() {
             <span className="text-right">Ações</span>
           </div>
           <ul>
-            {rows.map(({ client: c, count }, i) => {
+            {rows.map(({ client: c, count, aliases }, i) => {
               const initials = (c.band || c.name)
                 .split(" ")
                 .slice(0, 2)
@@ -144,8 +144,16 @@ export function ClientsView() {
                       {initials}
                     </div>
                     <div className="min-w-0">
-                      <p className="truncate font-semibold">
-                        {c.band || c.name}
+                      <p className="flex items-center gap-1.5 truncate font-semibold">
+                        <span className="truncate">{c.band || c.name}</span>
+                        {aliases > 0 && (
+                          <span
+                            title={`${aliases + 1} cadastros unidos pelo mesmo telefone`}
+                            className="shrink-0 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-px text-[9px] font-bold uppercase tracking-wider text-primary"
+                          >
+                            +{aliases}
+                          </span>
+                        )}
                       </p>
                       {c.band && (
                         <p className="truncate text-[11px] text-muted-foreground">
