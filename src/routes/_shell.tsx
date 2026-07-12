@@ -1,11 +1,25 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { createFileRoute, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { AppSidebar } from "@/components/app-sidebar";
+import { useAdmin } from "@/hooks/use-admin";
 
 export const Route = createFileRoute("/_shell")({
   component: ShellLayout,
 });
 
+const ADMIN_PREFIXES = ["/dashboard", "/clients", "/crm", "/finance", "/equipment", "/automation", "/settings"];
+
 function ShellLayout() {
+  const { isAdmin } = useAdmin();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isAdmin && ADMIN_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
+      navigate({ to: "/calendar", replace: true });
+    }
+  }, [isAdmin, pathname, navigate]);
+
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background text-foreground">
       {/* Ambient red glow — barely visible, gives the surface depth */}
