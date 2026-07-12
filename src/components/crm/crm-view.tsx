@@ -16,6 +16,13 @@ import { useStore } from "@/hooks/use-store";
 import { store } from "@/lib/scheduling/store";
 import { cn } from "@/lib/utils";
 import type { Lead } from "@/lib/scheduling/types";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { toast } from "sonner";
 
 type Tab = "pipeline" | "clientes" | "churn";
 type LeadStatus = Lead["status"];
