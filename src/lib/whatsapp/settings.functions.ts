@@ -72,7 +72,7 @@ export const saveWaSettings = createServerFn({ method: "POST" })
     ] as const) {
       if (key in data) patch[key] = (data as Record<string, unknown>)[key];
     }
-    const { error } = await supabase.from("wa_settings").update(patch).eq("id", data.id);
+    const { error } = await supabase.from("wa_settings").update(patch as never).eq("id", data.id);
     if (error) throw error;
     return { ok: true };
   });
