@@ -25,6 +25,8 @@ import type {
   SlotSuggestion,
 } from "@/lib/scheduling/types";
 import { cn } from "@/lib/utils";
+import { maskBrPhoneInput } from "@/lib/phone";
+
 
 interface Props {
   open: boolean;
@@ -514,12 +516,17 @@ export function NewAppointmentDialog({
                     <input
                       value={newClient.phone}
                       onChange={(e) =>
-                        setNewClient((s) => ({ ...s, phone: e.target.value }))
+                        setNewClient((s) => ({
+                          ...s,
+                          phone: maskBrPhoneInput(e.target.value),
+                        }))
                       }
-                      placeholder="+55 11 98888-0000"
+                      placeholder="(11) 98764-1234"
+                      inputMode="tel"
                       className="h-10 w-full rounded-md border border-border bg-surface-2 px-3 text-[13px] outline-none focus:border-primary/50"
                     />
                   </Field>
+
                   <Field label="Email">
                     <input
                       value={newClient.email}

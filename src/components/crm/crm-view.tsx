@@ -15,6 +15,7 @@ import {
 import { useStore } from "@/hooks/use-store";
 import { store } from "@/lib/scheduling/store";
 import { cn } from "@/lib/utils";
+import { formatPhoneSmart } from "@/lib/phone";
 import type { Lead } from "@/lib/scheduling/types";
 import {
   Dialog,
@@ -283,7 +284,7 @@ function ClientesTab() {
                     )}
                   </div>
                 </div>
-                <span className="truncate font-mono text-[12px]">{c.phone}</span>
+                <span className="truncate font-mono text-[12px]">{formatPhoneSmart(c.phone)}</span>
                 <span className="text-[11.5px] capitalize text-muted-foreground">
                   {c.origin}
                 </span>
@@ -420,7 +421,7 @@ function ChurnTab() {
                   </p>
                 )}
               </div>
-              <span className="truncate font-mono text-[12px]">{c.phone}</span>
+              <span className="truncate font-mono text-[12px]">{formatPhoneSmart(c.phone)}</span>
               <span className="flex items-center justify-end gap-1 tabular-nums">
                 <Users className="h-3 w-3 text-muted-foreground" />
                 {count}
