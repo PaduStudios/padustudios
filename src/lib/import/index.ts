@@ -48,7 +48,34 @@ export interface AppointmentImportPlan {
   skipped: Array<{ row: number; reason: string }>;
 }
 
-// ── Client plan ──────────────────────────────────────────────────────────────
+// A phone is considered a real, mergeable identifier only when it has at
+// least 8 digits and isn't just repeated zeros/nines/etc. Everything else
+// (empty, "0", "00000", "999") is a placeholder — each occurrence becomes
+// its own client so distinct people don't collapse into one.
+function isPlaceholderPhone(digits: string): boolean {
+  if (!digits) return true;
+  if (digits.length < 8) return true;
+  if (/^(\d)\1+$/.test(digits)) return true;
+  return false;
+}
+
+function normName(s: string | undefined | null): string {
+  return (s ?? "").toLowerCase().trim().replace(/\s+/g, " ");
+}
+
+/**
+ * Client key rules:
+ *   - valid phone → `v:<digits>|<name>`  (merge only when phone AND name match)
+ *   - placeholder → `p:<rowNum>|<name>`  (always unique per CSV row)
+ */
+function clientKeyForRow(
+  rowNum: number,
+  name: string,
+  phoneDigits: string
+): string {
+  if (isPlaceholderPhone(phoneDigits)) return `p:${rowNum}|${normName(name)}`;
+  return `v:${phoneDigits}|${normName(name)}`;
+}
 
 export function buildClientPlan(
   rows: CsvRow[],
@@ -56,9 +83,13 @@ export function buildClientPlan(
   options: ImportOptions
 ): ClientImportPlan {
   const existing = store.getSnapshot().clients;
-  const byPhone = new Map(
-    existing.map((c) => [normalizePhone(c.phone), c] as const)
-  );
+  // Index existing clients by the same compound key so re-imports don't duplicate them.
+  const byKey = new Map<string, Client>();
+  existing.forEach((c) => {
+    const digits = normalizePhone(c.phone);
+    if (isPlaceholderPhone(digits)) return; // placeholders never merge across imports
+    byKey.set(`v:${digits}|${normName(c.name)}`, c);
+  });
   const seenInBatch = new Set<string>();
 
   const toCreate: ClientImportPlan["toCreate"] = [];
@@ -74,13 +105,14 @@ export function buildClientPlan(
       skipped.push({ row: rowNum, reason: "Linha sem nome e sem telefone" });
       return;
     }
-    if (!phone) {
-      skipped.push({ row: rowNum, reason: `"${name}" sem telefone` });
-      return;
+
+    const key = clientKeyForRow(rowNum, name, phone);
+    // For valid phones, dedupe repeats inside the same batch (combined mode
+    // has one row per appointment, but the same client can appear many times).
+    if (!isPlaceholderPhone(phone)) {
+      if (seenInBatch.has(key)) return;
+      seenInBatch.add(key);
     }
-    // In combined mode the same phone appears on every row of that client — silently skip dupes.
-    if (seenInBatch.has(phone)) return;
-    seenInBatch.add(phone);
 
     const email = pickCell(row, mapping.email) || undefined;
     const cpf = normalizeCpf(pickCell(row, mapping.cpf)) || undefined;
@@ -89,7 +121,7 @@ export function buildClientPlan(
     const members = membersRaw ? Number(membersRaw) || undefined : undefined;
     const notes = pickCell(row, mapping.notes) || undefined;
 
-    const existingClient = byPhone.get(phone);
+    const existingClient = byKey.get(key);
     if (existingClient) {
       const patch: Partial<Client> = {};
       if (!existingClient.email && email) patch.email = email;
@@ -104,7 +136,7 @@ export function buildClientPlan(
     }
 
     toCreate.push({
-      name: name || phoneRaw || phone,
+      name: name || phoneRaw || phone || "Sem nome",
       phone: phoneRaw || phone,
       email,
       cpf,
@@ -124,28 +156,31 @@ export function buildClientPlan(
 function buildClientKeyIndex(
   plannedNewClients: ClientImportPlan["toCreate"]
 ): {
-  byPhone: Map<string, string>; // phone → client key
-  byName: Map<string, string>; // lower(name) → client key
+  byCompound: Map<string, string>; // v:<digits>|<name> → client key
+  byName: Map<string, string>; // lower(name) → client key (fallback only)
 } {
   const existing = store.getSnapshot().clients;
-  const byPhone = new Map<string, string>();
+  const byCompound = new Map<string, string>();
   const byName = new Map<string, string>();
 
   existing.forEach((c) => {
-    const p = normalizePhone(c.phone);
-    if (p) byPhone.set(p, `existing:${c.id}`);
-    if (c.name) byName.set(c.name.toLowerCase().trim(), `existing:${c.id}`);
-    if (c.band) byName.set(c.band.toLowerCase().trim(), `existing:${c.id}`);
+    const digits = normalizePhone(c.phone);
+    if (!isPlaceholderPhone(digits)) {
+      byCompound.set(`v:${digits}|${normName(c.name)}`, `existing:${c.id}`);
+    }
+    if (c.name) byName.set(normName(c.name), `existing:${c.id}`);
   });
   plannedNewClients.forEach((c, i) => {
-    const p = normalizePhone(c.phone);
+    const digits = normalizePhone(c.phone);
     const key = `new:${i}`;
-    if (p) byPhone.set(p, key);
-    if (c.name) byName.set(c.name.toLowerCase().trim(), key);
-    if (c.band) byName.set(c.band.toLowerCase().trim(), key);
+    if (!isPlaceholderPhone(digits)) {
+      byCompound.set(`v:${digits}|${normName(c.name)}`, key);
+    }
+    if (c.name) byName.set(normName(c.name), key);
   });
-  return { byPhone, byName };
+  return { byCompound, byName };
 }
+
 
 export function buildAppointmentPlan(
   rows: CsvRow[],
