@@ -24,7 +24,7 @@ function emit() {
   listeners.forEach((l) => l());
 }
 
-const emptyState: StoreShape = { clients: [], appointments: [], leads: [] };
+const emptyState: StoreShape = { clients: [], appointments: [], finance: [], leads: [] };
 let state: StoreShape = emptyState;
 
 function setState(next: StoreShape) {
