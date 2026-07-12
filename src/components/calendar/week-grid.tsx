@@ -53,11 +53,11 @@ export function WeekGrid({
   return (
     <div className="surface-panel flex h-full min-h-0 flex-col overflow-hidden">
       {/* Header row — no per-cell borders; vertical dividers come from the shared overlay below.
-          scrollbar-gutter mirrors the body's reserved scrollbar space so header cells stay
-          pixel-aligned with body columns whether the scrollbar is visible or not. */}
+          padding-right matches the body's reserved scrollbar space (see ::-webkit-scrollbar
+          rule in styles.css) so header cells stay pixel-aligned with body columns. */}
       <div
         className="grid shrink-0 border-b border-border"
-        style={{ gridTemplateColumns: cols, scrollbarGutter: "stable" }}
+        style={{ gridTemplateColumns: cols, paddingRight: 10 }}
 
       >
         <div />
