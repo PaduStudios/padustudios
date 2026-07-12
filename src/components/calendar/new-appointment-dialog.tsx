@@ -77,6 +77,7 @@ export function NewAppointmentDialog({
   const [notes, setNotes] = useState("");
   const [price, setPrice] = useState<string>("");
   const [priceTouched, setPriceTouched] = useState(false);
+  const [discount, setDiscount] = useState<string>("");
 
   useEffect(() => {
     if (!open) return;
