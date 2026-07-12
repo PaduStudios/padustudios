@@ -16,6 +16,13 @@ const SORT_LABELS: Record<SortKey, string> = {
   recent: "Cadastro recente",
 };
 
+function normalizePhone(raw: string): string {
+  const digits = (raw || "").replace(/\D/g, "");
+  // Use last 8 digits (the subscriber part) so variations in country code /
+  // area code / trailing 9 all collapse into the same key.
+  return digits.slice(-8);
+}
+
 export function ClientsView() {
   const { clients, appointments } = useStore();
   const [q, setQ] = useState("");
@@ -29,20 +36,39 @@ export function ClientsView() {
   }
 
   const rows = useMemo(() => {
+    // Group clients that share the same phone (normalized). Pick the most
+    // "complete" record as the primary and aggregate ensaios across all
+    // duplicates in the group.
+    const groups = new Map<string, Client[]>();
+    for (const c of clients) {
+      const key = normalizePhone(c.phone) || `id:${c.id}`;
+      const arr = groups.get(key);
+      if (arr) arr.push(c);
+      else groups.set(key, [c]);
+    }
+
+    const score = (c: Client) =>
+      (c.band ? 2 : 0) + (c.email ? 1 : 0) + (c.cpf ? 1 : 0) + c.name.length / 100;
+
+    const merged: { client: Client; count: number; aliases: number }[] = [];
+    for (const group of groups.values()) {
+      const primary = [...group].sort((a, b) => score(b) - score(a))[0];
+      const ids = new Set(group.map((c) => c.id));
+      const count = appointments.filter((a) => ids.has(a.clientId)).length;
+      merged.push({ client: primary, count, aliases: group.length - 1 });
+    }
+
     const filtered = q
-      ? clients.filter(
-          (c) =>
+      ? merged.filter(
+          ({ client: c }) =>
             c.name.toLowerCase().includes(q.toLowerCase()) ||
             (c.band ?? "").toLowerCase().includes(q.toLowerCase()) ||
             c.phone.replace(/\D/g, "").includes(q.replace(/\D/g, ""))
         )
-      : clients;
-    const withCount = filtered.map((c) => ({
-      client: c,
-      count: appointments.filter((a) => a.clientId === c.id).length,
-    }));
+      : merged;
+
     const collator = new Intl.Collator("pt-BR", { sensitivity: "base" });
-    withCount.sort((a, b) => {
+    filtered.sort((a, b) => {
       const nameA = (a.client.band || a.client.name).trim();
       const nameB = (b.client.band || b.client.name).trim();
       switch (sort) {
@@ -58,7 +84,7 @@ export function ClientsView() {
           return b.client.createdAt.localeCompare(a.client.createdAt);
       }
     });
-    return withCount;
+    return filtered;
   }, [clients, appointments, q, sort]);
 
   return (
@@ -97,7 +123,7 @@ export function ClientsView() {
             <span className="text-right">Ações</span>
           </div>
           <ul>
-            {rows.map(({ client: c, count }, i) => {
+            {rows.map(({ client: c, count, aliases }, i) => {
               const initials = (c.band || c.name)
                 .split(" ")
                 .slice(0, 2)
@@ -118,8 +144,16 @@ export function ClientsView() {
                       {initials}
                     </div>
                     <div className="min-w-0">
-                      <p className="truncate font-semibold">
-                        {c.band || c.name}
+                      <p className="flex items-center gap-1.5 truncate font-semibold">
+                        <span className="truncate">{c.band || c.name}</span>
+                        {aliases > 0 && (
+                          <span
+                            title={`${aliases + 1} cadastros unidos pelo mesmo telefone`}
+                            className="shrink-0 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-px text-[9px] font-bold uppercase tracking-wider text-primary"
+                          >
+                            +{aliases}
+                          </span>
+                        )}
                       </p>
                       {c.band && (
                         <p className="truncate text-[11px] text-muted-foreground">

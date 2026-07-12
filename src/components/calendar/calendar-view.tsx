@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { useStore } from "@/hooks/use-store";
+import { useAdmin } from "@/hooks/use-admin";
 import { toISODate, weekDays, formatMonthYear } from "@/lib/scheduling/time";
 import { isSlotFree } from "@/lib/scheduling/availability";
 import type { Appointment } from "@/lib/scheduling/types";
@@ -24,6 +25,7 @@ import { cn } from "@/lib/utils";
 
 export function CalendarView() {
   const { appointments, clients } = useStore();
+  const { isAdmin } = useAdmin();
   const [mounted, setMounted] = useState(false);
   const [anchor, setAnchor] = useState<Date>(() => new Date());
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -103,42 +105,45 @@ export function CalendarView() {
         onToday={() => setAnchor(new Date())}
         isToday={days.some((d) => isSameDay(d, new Date()))}
         onNew={() => openNew()}
+        showNew={isAdmin}
       />
 
       <div className="flex flex-1 gap-6 overflow-hidden p-6">
         {/* LEFT: metrics + grid */}
         <div className="flex min-w-0 flex-1 flex-col gap-5 overflow-hidden">
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-            className="grid grid-cols-3 gap-4"
-          >
-            <MetricCard
-              icon={CalendarCheck}
-              label="Ensaios hoje"
-              value={String(todayAppointments.length)}
-              hint={
-                todayAppointments.length === 0
-                  ? "Nenhum ensaio agendado"
-                  : `${todayAppointments.filter((a) => a.status === "confirmed").length} confirmados`
-              }
-            />
-            <MetricCard
-              icon={TrendingUp}
-              label="Ocupação da semana"
-              value={`${occupancy}%`}
-              hint={`${weekAppointments.length} ensaios · ${days[0].getDate()}–${days[6].getDate()}`}
-              progress={occupancy}
-            />
-            <MetricCard
-              icon={Clock}
-              label="Próximo horário livre"
-              value={mounted && nextFree ? nextFree.start : "—"}
-              hint={mounted ? (nextFree ? nextFree.dayLabel : "Sem janelas nesta semana") : " "}
-              accent
-            />
-          </motion.div>
+          {isAdmin && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+              className="grid grid-cols-3 gap-4"
+            >
+              <MetricCard
+                icon={CalendarCheck}
+                label="Ensaios hoje"
+                value={String(todayAppointments.length)}
+                hint={
+                  todayAppointments.length === 0
+                    ? "Nenhum ensaio agendado"
+                    : `${todayAppointments.filter((a) => a.status === "confirmed").length} confirmados`
+                }
+              />
+              <MetricCard
+                icon={TrendingUp}
+                label="Ocupação da semana"
+                value={`${occupancy}%`}
+                hint={`${weekAppointments.length} ensaios · ${days[0].getDate()}–${days[6].getDate()}`}
+                progress={occupancy}
+              />
+              <MetricCard
+                icon={Clock}
+                label="Próximo horário livre"
+                value={mounted && nextFree ? nextFree.start : "—"}
+                hint={mounted ? (nextFree ? nextFree.dayLabel : "Sem janelas nesta semana") : " "}
+                accent
+              />
+            </motion.div>
+          )}
 
           <motion.div
             initial={{ opacity: 0, y: 12 }}
@@ -151,30 +156,33 @@ export function CalendarView() {
               appointments={appointments}
               clients={clients}
               selectedId={selectedId}
-              onSelect={setSelectedId}
-              onEmptyClick={(date, start) => openNew(date, start)}
+              onSelect={isAdmin ? setSelectedId : () => {}}
+              onEmptyClick={(date, start) => isAdmin && openNew(date, start)}
+              readOnly={!isAdmin}
             />
           </motion.div>
         </div>
 
-        {/* RIGHT: details panel (desktop) */}
-        <aside className="hidden w-[340px] shrink-0 xl:block">
-          <DetailsPanel
-            appointment={selected}
-            client={selectedClient}
-            onClose={() => setSelectedId(null)}
-            onNew={() => openNew()}
-            onEdit={openEdit}
-            todayAppointments={todayAppointments
-              .slice()
-              .sort((a, b) => a.start.localeCompare(b.start))}
-            clientsById={Object.fromEntries(clients.map((c) => [c.id, c]))}
-            onSelectAppointment={setSelectedId}
-          />
-        </aside>
+        {/* RIGHT: details panel (desktop) — admin only */}
+        {isAdmin && (
+          <aside className="hidden w-[340px] shrink-0 xl:block">
+            <DetailsPanel
+              appointment={selected}
+              client={selectedClient}
+              onClose={() => setSelectedId(null)}
+              onNew={() => openNew()}
+              onEdit={openEdit}
+              todayAppointments={todayAppointments
+                .slice()
+                .sort((a, b) => a.start.localeCompare(b.start))}
+              clientsById={Object.fromEntries(clients.map((c) => [c.id, c]))}
+              onSelectAppointment={setSelectedId}
+            />
+          </aside>
+        )}
 
         {/* Mobile / tablet: details as overlay when an appointment is selected */}
-        {selected && (
+        {isAdmin && selected && (
           <div className="fixed inset-0 z-40 xl:hidden">
             <div
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
@@ -221,6 +229,7 @@ function Header({
   onToday,
   isToday,
   onNew,
+  showNew = true,
 }: {
   rangeLabel: string;
   monthLabel: string;
@@ -229,6 +238,7 @@ function Header({
   onToday: () => void;
   isToday: boolean;
   onNew: () => void;
+  showNew?: boolean;
 }) {
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center justify-between gap-4 border-b border-border bg-background/70 px-6 backdrop-blur-xl">
@@ -273,30 +283,35 @@ function Header({
       </div>
 
       <div className="flex items-center gap-2">
-        <div className="relative hidden md:block">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Buscar banda, telefone, dia…"
-            className="h-9 w-72 rounded-md border border-border bg-surface pl-8 pr-14 text-[12.5px] outline-none transition-colors placeholder:text-muted-foreground focus:border-border-strong"
-          />
-          <kbd className="pointer-events-none absolute right-2 top-1/2 flex h-5 -translate-y-1/2 items-center gap-0.5 rounded border border-border bg-surface-2 px-1 text-[10px] font-mono text-muted-foreground">
-            <Command className="h-2.5 w-2.5" />K
-          </kbd>
-        </div>
+        {showNew && (
+          <div className="relative hidden md:block">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Buscar banda, telefone, dia…"
+              className="h-9 w-72 rounded-md border border-border bg-surface pl-8 pr-14 text-[12.5px] outline-none transition-colors placeholder:text-muted-foreground focus:border-border-strong"
+            />
+            <kbd className="pointer-events-none absolute right-2 top-1/2 flex h-5 -translate-y-1/2 items-center gap-0.5 rounded border border-border bg-surface-2 px-1 text-[10px] font-mono text-muted-foreground">
+              <Command className="h-2.5 w-2.5" />K
+            </kbd>
+          </div>
+        )}
 
-        <button
-          onClick={onNew}
-          className="flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-[12.5px] font-semibold text-primary-foreground transition-transform active:scale-[0.98]"
-          style={{ boxShadow: "var(--shadow-glow)" }}
-        >
-          <Plus className="h-4 w-4" />
-          Novo agendamento
-        </button>
+        {showNew && (
+          <button
+            onClick={onNew}
+            className="flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-[12.5px] font-semibold text-primary-foreground transition-transform active:scale-[0.98]"
+            style={{ boxShadow: "var(--shadow-glow)" }}
+          >
+            <Plus className="h-4 w-4" />
+            Novo agendamento
+          </button>
+        )}
       </div>
     </header>
   );
 }
+
 
 function MetricCard({
   icon: Icon,
