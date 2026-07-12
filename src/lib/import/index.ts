@@ -326,14 +326,17 @@ export async function commit(
   const newClientIds: string[] = clientPlan.toCreate.map(() => crypto.randomUUID());
 
   if (clientPlan.toCreate.length > 0) {
-    const rows = clientPlan.toCreate.map((c, i) =>
-      clientToRow({ ...c, id: newClientIds[i] } as Partial<Client>)
-    );
+    const rows = clientPlan.toCreate.map((c, i) => {
+      const { _key, ...rest } = c;
+      void _key;
+      return clientToRow({ ...rest, id: newClientIds[i] } as Partial<Client>);
+    });
     const { error } = await supabase
       .from("clients")
       .insert(rows as never);
     if (error) throw new Error(`Falha ao inserir clientes: ${error.message}`);
   }
+
 
   if (clientPlan.toMerge.length > 0) {
     const results = await Promise.all(
