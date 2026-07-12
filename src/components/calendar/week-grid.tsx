@@ -281,6 +281,7 @@ function AppointmentBlock({
   height,
   selected,
   onSelect,
+  readOnly,
 }: {
   appt: Appointment;
   client?: Client;
@@ -288,6 +289,7 @@ function AppointmentBlock({
   height: number;
   selected: boolean;
   onSelect: () => void;
+  readOnly?: boolean;
 }) {
   const statusColor = {
     confirmed: "var(--status-confirmed)",
@@ -299,31 +301,38 @@ function AppointmentBlock({
   return (
     <motion.button
       layout
-      whileHover={{ scale: 1.005 }}
+      whileHover={readOnly ? undefined : { scale: 1.005 }}
       transition={{ type: "spring", stiffness: 400, damping: 30 }}
       onClick={(e) => {
         e.stopPropagation();
+        if (readOnly) return;
         onSelect();
       }}
+      disabled={readOnly}
       className={cn(
         "group absolute left-1 right-1 flex flex-col overflow-hidden rounded-md p-2 text-left transition-all",
-        selected && "ring-2 ring-primary/60 ring-offset-2 ring-offset-background"
+        readOnly && "cursor-default",
+        selected && !readOnly && "ring-2 ring-primary/60 ring-offset-2 ring-offset-background"
       )}
       style={{
         top,
         height: Math.max(28, height),
-        background: `color-mix(in oklch, ${statusColor} 18%, var(--surface))`,
-        borderLeft: `3px solid ${statusColor}`,
+        background: readOnly
+          ? "color-mix(in oklch, var(--muted-foreground) 12%, var(--surface))"
+          : `color-mix(in oklch, ${statusColor} 18%, var(--surface))`,
+        borderLeft: readOnly
+          ? "3px solid var(--muted-foreground)"
+          : `3px solid ${statusColor}`,
         boxShadow:
           "inset 0 1px 0 color-mix(in oklch, white 5%, transparent), 0 1px 2px color-mix(in oklch, black 40%, transparent)",
       }}
     >
       <div className="flex min-w-0 items-center gap-1.5">
         <p className="truncate text-[12px] font-semibold leading-tight">
-          {client?.band || client?.name || "Sem título"}
+          {readOnly ? "Reservado" : (client?.band || client?.name || "Sem título")}
         </p>
       </div>
-      {height >= 40 && (
+      {height >= 40 && !readOnly && (
         <p className="mt-0.5 font-mono text-[10px] font-medium text-muted-foreground">
           {appt.start} – {appt.end}
           {appt.room ? ` · ${appt.room}` : ""}
@@ -332,3 +341,4 @@ function AppointmentBlock({
     </motion.button>
   );
 }
+
