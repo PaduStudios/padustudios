@@ -97,7 +97,8 @@ export function WeekGrid({
       <div
         ref={scrollRef}
         className="relative flex-1 overflow-y-auto"
-        style={{ contain: "strict" }}
+        style={{ contain: "strict", scrollbarGutter: "stable" }}
+
       >
         <div
           className="relative grid"
