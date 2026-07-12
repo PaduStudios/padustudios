@@ -15,7 +15,7 @@ import {
 import { useStore } from "@/hooks/use-store";
 import { store } from "@/lib/scheduling/store";
 import { cn } from "@/lib/utils";
-import { formatPhoneSmart, onlyDigits } from "@/lib/phone";
+import { formatPhoneSmart } from "@/lib/phone";
 import type { Lead } from "@/lib/scheduling/types";
 import {
   Dialog,
