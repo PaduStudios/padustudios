@@ -73,8 +73,10 @@ export function NewAppointmentDialog({
     members: "",
     origin: "whatsapp" as ClientOrigin,
   });
-  const [room, setRoom] = useState("Sala A");
+  const [room, setRoom] = useState<string>("Ensaio");
   const [notes, setNotes] = useState("");
+  const [price, setPrice] = useState<string>("");
+  const [priceTouched, setPriceTouched] = useState(false);
 
   useEffect(() => {
     if (!open) return;
