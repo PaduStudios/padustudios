@@ -68,7 +68,7 @@ export function PublicBooking() {
       start: pick.start,
       end,
       status: "pending",
-      room: "Sala A",
+      room: "Ensaio",
       notes: form.notes.trim() || undefined,
     });
     setDone({ date: pick.date, start: pick.start, end });
