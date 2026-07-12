@@ -273,7 +273,7 @@ export function NewAppointmentDialog({
             </div>
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
-                Padu OS · {editing ? "Editar ensaio" : "Agendamento"}
+                Padu Studios · {editing ? "Editar ensaio" : "Agendamento"}
               </p>
               <p className="text-[14px] font-semibold">
                 {step === "when" ? "Data e horário" : "Quem vai ensaiar?"}
