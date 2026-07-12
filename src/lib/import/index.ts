@@ -142,6 +142,7 @@ export function buildClientPlan(
     }
 
     toCreate.push({
+      _key: key,
       name: name || phoneRaw || phone || "Sem nome",
       phone: phoneRaw || phone,
       email,
@@ -151,6 +152,7 @@ export function buildClientPlan(
       origin: options.defaultOrigin,
       notes,
     });
+
   });
 
   return { toCreate, toMerge, skipped };
