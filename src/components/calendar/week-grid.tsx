@@ -141,6 +141,7 @@ export function WeekGrid({
                 selectedId={selectedId}
                 onSelect={onSelect}
                 onEmptyClick={onEmptyClick}
+                readOnly={readOnly}
               />
             );
           })}
