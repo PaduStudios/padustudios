@@ -164,10 +164,12 @@ export function buildClientPlan(
 function buildClientKeyIndex(
   plannedNewClients: ClientImportPlan["toCreate"]
 ): {
+  byPlanKey: Map<string, string>; // internal _key (from buildClientPlan) → client key
   byCompound: Map<string, string>; // v:<digits>|<name> → client key
   byName: Map<string, string>; // lower(name) → client key (fallback only)
 } {
   const existing = store.getSnapshot().clients;
+  const byPlanKey = new Map<string, string>();
   const byCompound = new Map<string, string>();
   const byName = new Map<string, string>();
 
@@ -181,13 +183,15 @@ function buildClientKeyIndex(
   plannedNewClients.forEach((c, i) => {
     const digits = normalizePhone(c.phone);
     const key = `new:${i}`;
+    if (c._key) byPlanKey.set(c._key, key);
     if (!isPlaceholderPhone(digits)) {
       byCompound.set(`v:${digits}|${normName(c.name)}`, key);
     }
     if (c.name) byName.set(normName(c.name), key);
   });
-  return { byCompound, byName };
+  return { byPlanKey, byCompound, byName };
 }
+
 
 
 export function buildAppointmentPlan(
