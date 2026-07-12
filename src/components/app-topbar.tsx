@@ -133,7 +133,7 @@ export function AppTopbar() {
           className="flex items-center gap-2 rounded-md border border-border bg-surface-2 px-3 py-1.5 text-[12px] font-semibold text-foreground transition-colors hover:bg-surface-3"
         >
           <Lock className="h-3.5 w-3.5" />
-          {hasCreds ? "Login" : "Criar acesso"}
+          Login
         </button>
       )}
 
