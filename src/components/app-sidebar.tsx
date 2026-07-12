@@ -35,8 +35,7 @@ const business: NavItem[] = [
 ];
 
 const operations: NavItem[] = [
-  { to: "/equipment", label: "Equipamentos", icon: Guitar, soon: true, adminOnly: true },
-  { to: "/automation", label: "Automação", icon: Zap, soon: true, adminOnly: true },
+  { to: "/automation", label: "Automação", icon: Zap, adminOnly: true },
 ];
 
 export function AppSidebar() {
