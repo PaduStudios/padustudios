@@ -15,6 +15,7 @@ import {
 import { useStore } from "@/hooks/use-store";
 import { store } from "@/lib/scheduling/store";
 import { cn } from "@/lib/utils";
+import { formatPhoneSmart, onlyDigits } from "@/lib/phone";
 import type { Lead } from "@/lib/scheduling/types";
 import {
   Dialog,
@@ -283,7 +284,7 @@ function ClientesTab() {
                     )}
                   </div>
                 </div>
-                <span className="truncate font-mono text-[12px]">{c.phone}</span>
+                <span className="truncate font-mono text-[12px]">{formatPhoneSmart(c.phone)}</span>
                 <span className="text-[11.5px] capitalize text-muted-foreground">
                   {c.origin}
                 </span>
