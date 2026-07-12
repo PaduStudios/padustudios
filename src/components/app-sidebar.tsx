@@ -106,20 +106,6 @@ export function AppSidebar() {
           )}
         </button>
 
-        {isAdmin && (
-          <button className="mt-2 flex w-full items-center gap-3 rounded-md p-2 text-left transition-colors hover:bg-surface-2">
-            <div className="grid h-7 w-7 place-items-center rounded-full bg-surface-3 text-[11px] font-bold">
-              P
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[12px] font-semibold">Padu</p>
-              <p className="truncate text-[10px] text-muted-foreground">
-                admin@padustudios.com
-              </p>
-            </div>
-            <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" />
-          </button>
-        )}
       </div>
 
       <AdminLoginDialog open={loginOpen} onOpenChange={setLoginOpen} />
