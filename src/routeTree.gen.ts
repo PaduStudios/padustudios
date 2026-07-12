@@ -22,6 +22,7 @@ import { Route as ShellCalendarRouteImport } from './routes/_shell.calendar'
 import { Route as ShellAutomationRouteImport } from './routes/_shell.automation'
 import { Route as ShellSettingsIndexRouteImport } from './routes/_shell.settings.index'
 import { Route as ShellSettingsImportRouteImport } from './routes/_shell.settings.import'
+import { Route as ApiPublicHooksWhatsappRouteImport } from './routes/api/public/hooks/whatsapp'
 
 const BookRoute = BookRouteImport.update({
   id: '/book',
@@ -87,6 +88,11 @@ const ShellSettingsImportRoute = ShellSettingsImportRouteImport.update({
   path: '/import',
   getParentRoute: () => ShellSettingsRoute,
 } as any)
+const ApiPublicHooksWhatsappRoute = ApiPublicHooksWhatsappRouteImport.update({
+  id: '/api/public/hooks/whatsapp',
+  path: '/api/public/hooks/whatsapp',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -101,6 +107,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof ShellSettingsRouteWithChildren
   '/settings/import': typeof ShellSettingsImportRoute
   '/settings/': typeof ShellSettingsIndexRoute
+  '/api/public/hooks/whatsapp': typeof ApiPublicHooksWhatsappRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -114,6 +121,7 @@ export interface FileRoutesByTo {
   '/finance': typeof ShellFinanceRoute
   '/settings/import': typeof ShellSettingsImportRoute
   '/settings': typeof ShellSettingsIndexRoute
+  '/api/public/hooks/whatsapp': typeof ApiPublicHooksWhatsappRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -130,6 +138,7 @@ export interface FileRoutesById {
   '/_shell/settings': typeof ShellSettingsRouteWithChildren
   '/_shell/settings/import': typeof ShellSettingsImportRoute
   '/_shell/settings/': typeof ShellSettingsIndexRoute
+  '/api/public/hooks/whatsapp': typeof ApiPublicHooksWhatsappRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -146,6 +155,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/settings/import'
     | '/settings/'
+    | '/api/public/hooks/whatsapp'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -159,6 +169,7 @@ export interface FileRouteTypes {
     | '/finance'
     | '/settings/import'
     | '/settings'
+    | '/api/public/hooks/whatsapp'
   id:
     | '__root__'
     | '/'
@@ -174,12 +185,14 @@ export interface FileRouteTypes {
     | '/_shell/settings'
     | '/_shell/settings/import'
     | '/_shell/settings/'
+    | '/api/public/hooks/whatsapp'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ShellRoute: typeof ShellRouteWithChildren
   BookRoute: typeof BookRoute
+  ApiPublicHooksWhatsappRoute: typeof ApiPublicHooksWhatsappRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -275,6 +288,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellSettingsImportRouteImport
       parentRoute: typeof ShellSettingsRoute
     }
+    '/api/public/hooks/whatsapp': {
+      id: '/api/public/hooks/whatsapp'
+      path: '/api/public/hooks/whatsapp'
+      fullPath: '/api/public/hooks/whatsapp'
+      preLoaderRoute: typeof ApiPublicHooksWhatsappRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -320,6 +340,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ShellRoute: ShellRouteWithChildren,
   BookRoute: BookRoute,
+  ApiPublicHooksWhatsappRoute: ApiPublicHooksWhatsappRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
