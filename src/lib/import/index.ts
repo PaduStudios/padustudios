@@ -1,13 +1,15 @@
 // Orchestrator: reads mapped CSV rows and applies them to the current store,
-// deduping clients by normalized phone. Pure of I/O — takes rows in, calls
-// store methods out. Same interface will work later against a Supabase-backed
-// store without changing the wizard UI.
+// deduping clients by normalized phone. Bulk-writes to Lovable Cloud on
+// commit, then refreshes the local snapshot so the UI reflects the new
+// server truth.
 
-import { store } from "@/lib/scheduling/store";
+import { supabase } from "@/integrations/supabase/client";
+import { store, clientToRow, apptToRow } from "@/lib/scheduling/store";
 import type { Appointment, Client, ClientOrigin } from "@/lib/scheduling/types";
 import {
   addMinutes,
   mapOrigin,
+
   mapStatus,
   normalizeCpf,
   normalizePhone,
@@ -262,35 +264,69 @@ export interface CommitResult {
   appointmentsCreated: number;
 }
 
-export function commit(
+export async function commit(
   clientPlan: ClientImportPlan,
   appointmentPlan: AppointmentImportPlan
-): CommitResult {
-  const newClientIds: string[] = [];
-  clientPlan.toCreate.forEach((c) => {
-    const created = store.addClient(c);
-    newClientIds.push(created.id);
-  });
-  clientPlan.toMerge.forEach(({ existingId, patch }) => {
-    store.updateClient(existingId, patch);
-  });
+): Promise<CommitResult> {
+  // Pre-assign UUIDs so appointments can reference new clients in the same batch.
+  const newClientIds: string[] = clientPlan.toCreate.map(() => crypto.randomUUID());
+
+  if (clientPlan.toCreate.length > 0) {
+    const rows = clientPlan.toCreate.map((c, i) =>
+      clientToRow({ ...c, id: newClientIds[i] } as Partial<Client>)
+    );
+    const { error } = await supabase
+      .from("clients")
+      .insert(rows as never);
+    if (error) throw new Error(`Falha ao inserir clientes: ${error.message}`);
+  }
+
+  if (clientPlan.toMerge.length > 0) {
+    const results = await Promise.all(
+      clientPlan.toMerge.map(({ existingId, patch }) =>
+        supabase
+          .from("clients")
+          .update(clientToRow(patch) as never)
+          .eq("id", existingId)
+      )
+    );
+    const firstErr = results.find((r) => r.error)?.error;
+    if (firstErr) throw new Error(`Falha ao atualizar clientes: ${firstErr.message}`);
+  }
 
   let appointmentsCreated = 0;
-  appointmentPlan.toCreate.forEach((appt) => {
-    let clientId: string | undefined;
-    if (appt._clientKey.startsWith("existing:")) {
-      clientId = appt._clientKey.slice("existing:".length);
-    } else if (appt._clientKey.startsWith("new:")) {
-      const idx = Number(appt._clientKey.slice("new:".length));
-      clientId = newClientIds[idx];
-    }
-    if (!clientId) return;
+  if (appointmentPlan.toCreate.length > 0) {
+    const apptRows: Record<string, unknown>[] = [];
+    appointmentPlan.toCreate.forEach((appt) => {
+      let clientId: string | undefined;
+      if (appt._clientKey.startsWith("existing:")) {
+        clientId = appt._clientKey.slice("existing:".length);
+      } else if (appt._clientKey.startsWith("new:")) {
+        const idx = Number(appt._clientKey.slice("new:".length));
+        clientId = newClientIds[idx];
+      }
+      if (!clientId) return;
+      const { _clientKey, ...rest } = appt;
+      void _clientKey;
+      apptRows.push(
+        apptToRow({ ...rest, clientId, id: crypto.randomUUID() } as Partial<Appointment>)
+      );
+    });
 
-    const { _clientKey, ...rest } = appt;
-    void _clientKey;
-    store.addAppointment({ ...rest, clientId });
-    appointmentsCreated += 1;
-  });
+    // Chunk to keep payloads sane and avoid timeouts on very large imports.
+    const CHUNK = 200;
+    for (let i = 0; i < apptRows.length; i += CHUNK) {
+      const slice = apptRows.slice(i, i + CHUNK);
+      const { error } = await supabase
+        .from("appointments")
+        .insert(slice as never);
+      if (error) throw new Error(`Falha ao inserir agendamentos: ${error.message}`);
+      appointmentsCreated += slice.length;
+    }
+  }
+
+  // Pull the fresh server truth into the local snapshot.
+  await store.refresh();
 
   return {
     clientsCreated: clientPlan.toCreate.length,
@@ -298,3 +334,4 @@ export function commit(
     appointmentsCreated,
   };
 }
+

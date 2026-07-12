@@ -1,13 +1,15 @@
-// Mock store — localStorage-backed for now.
-// Every write is wrapped in a tiny pub/sub so React components can subscribe
-// via useSyncExternalStore. When we plug in the backend, we swap this module
-// for a Supabase client without touching the UI.
+// Store — backed by Lovable Cloud (Supabase) with an in-memory cache and
+// pub/sub for useSyncExternalStore. Mutations are optimistic: the local
+// cache updates immediately, the network write happens in the background,
+// and a failed write reverts the change and surfaces a toast.
+//
+// Same public API as the previous localStorage store so no UI change is
+// required — components keep calling store.addClient(...) etc. synchronously.
 
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import type { Appointment, Client, Lead } from "./types";
 import { toISODate } from "./time";
-
-// Bump this suffix to force-reset local state for existing users.
-const STORAGE_KEY = "padu-os:store:v2";
 
 interface StoreShape {
   clients: Client[];
@@ -21,63 +23,190 @@ function emit() {
   listeners.forEach((l) => l());
 }
 
-function seed(): StoreShape {
-  // Start empty — no demo data.
-  return { clients: [], appointments: [], leads: [] };
-}
+const emptyState: StoreShape = { clients: [], appointments: [], leads: [] };
+let state: StoreShape = emptyState;
 
-function readState(): StoreShape {
-  if (typeof window === "undefined") return seed();
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      const initial = seed();
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
-      return initial;
-    }
-    return JSON.parse(raw) as StoreShape;
-  } catch {
-    return seed();
-  }
-}
-
-let state: StoreShape = readState();
-
-function persist() {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+function setState(next: StoreShape) {
+  state = next;
   emit();
 }
 
-const serverSnapshot: StoreShape = seed();
+// ── Row ↔ domain mapping ─────────────────────────────────────────────────────
+
+type ClientRow = {
+  id: string;
+  name: string;
+  phone: string;
+  email: string | null;
+  cpf: string | null;
+  band: string | null;
+  members: number | null;
+  origin: string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type ApptRow = {
+  id: string;
+  client_id: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  ends_next_day: boolean;
+  status: string;
+  room: string | null;
+  price: number | string | null;
+  payment_method: string | null;
+  notes: string | null;
+  created_at: string;
+};
+
+function rowToClient(r: ClientRow): Client {
+  return {
+    id: r.id,
+    name: r.name,
+    phone: r.phone,
+    email: r.email ?? undefined,
+    cpf: r.cpf ?? undefined,
+    band: r.band ?? undefined,
+    members: r.members ?? undefined,
+    origin: (r.origin as Client["origin"]) ?? "other",
+    notes: r.notes ?? undefined,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  };
+}
+
+function rowToAppt(r: ApptRow): Appointment {
+  return {
+    id: r.id,
+    clientId: r.client_id,
+    date: r.date,
+    start: r.start_time,
+    end: r.end_time,
+    status: r.status as Appointment["status"],
+    room: r.room ?? undefined,
+    price: r.price == null ? undefined : Number(r.price),
+    paymentMethod: r.payment_method ?? undefined,
+    notes: r.notes ?? undefined,
+    createdAt: r.created_at,
+  };
+}
+
+export function clientToRow(c: Partial<Client>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  if (c.id !== undefined) out.id = c.id;
+  if (c.name !== undefined) out.name = c.name;
+  if (c.phone !== undefined) out.phone = c.phone;
+  if (c.email !== undefined) out.email = c.email ?? null;
+  if (c.cpf !== undefined) out.cpf = c.cpf ?? null;
+  if (c.band !== undefined) out.band = c.band ?? null;
+  if (c.members !== undefined) out.members = c.members ?? null;
+  if (c.origin !== undefined) out.origin = c.origin;
+  if (c.notes !== undefined) out.notes = c.notes ?? null;
+  return out;
+}
+
+export function apptToRow(a: Partial<Appointment>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  if (a.id !== undefined) out.id = a.id;
+  if (a.clientId !== undefined) out.client_id = a.clientId;
+  if (a.date !== undefined) out.date = a.date;
+  if (a.start !== undefined) out.start_time = a.start;
+  if (a.end !== undefined) out.end_time = a.end;
+  if (a.status !== undefined) out.status = a.status;
+  if (a.room !== undefined) out.room = a.room ?? null;
+  if (a.price !== undefined) out.price = a.price ?? null;
+  if (a.paymentMethod !== undefined) out.payment_method = a.paymentMethod ?? null;
+  if (a.notes !== undefined) out.notes = a.notes ?? null;
+  return out;
+}
+
+// ── Boot / refresh ───────────────────────────────────────────────────────────
+
+let bootPromise: Promise<void> | null = null;
+
+async function boot() {
+  const [{ data: clientRows, error: cErr }, { data: apptRows, error: aErr }] =
+    await Promise.all([
+      supabase.from("clients").select("*").order("created_at", { ascending: false }),
+      supabase.from("appointments").select("*").order("date", { ascending: false }),
+    ]);
+  if (cErr) {
+    console.error("[store] failed to load clients", cErr);
+    toast.error("Não consegui carregar clientes do servidor", {
+      description: cErr.message,
+    });
+  }
+  if (aErr) {
+    console.error("[store] failed to load appointments", aErr);
+    toast.error("Não consegui carregar agendamentos do servidor", {
+      description: aErr.message,
+    });
+  }
+  setState({
+    clients: (clientRows ?? []).map((r) => rowToClient(r as ClientRow)),
+    appointments: (apptRows ?? []).map((r) => rowToAppt(r as ApptRow)),
+    leads: state.leads,
+  });
+}
+
+function ensureBooted() {
+  if (typeof window === "undefined") return;
+  if (!bootPromise) bootPromise = boot();
+}
+
+// ── Store API ────────────────────────────────────────────────────────────────
+
+function reportError(action: string, error: { message?: string } | null | undefined) {
+  console.error(`[store] ${action} failed`, error);
+  toast.error(`Falha ao ${action}`, { description: error?.message });
+}
 
 export const store = {
   subscribe(fn: () => void) {
+    ensureBooted();
     listeners.add(fn);
-    return () => listeners.delete(fn);
+    return () => {
+      listeners.delete(fn);
+    };
   },
   getSnapshot(): StoreShape {
+    ensureBooted();
     return state;
   },
   getServerSnapshot(): StoreShape {
-    return serverSnapshot;
-  },
-  reset() {
-    state = seed();
-    persist();
+    return emptyState;
   },
 
-  // ── Clients ────────────────────────────────────────────────────────────────
+  /** Refetch everything from the server. Called after bulk imports. */
+  async refresh() {
+    bootPromise = boot();
+    await bootPromise;
+  },
+
+  // ── Clients ──────────────────────────────────────────────────────────────
   addClient(input: Omit<Client, "id" | "createdAt" | "updatedAt">): Client {
     const now = new Date().toISOString();
     const client: Client = {
       ...input,
-      id: `c${crypto.randomUUID().slice(0, 8)}`,
+      id: crypto.randomUUID(),
       createdAt: now,
       updatedAt: now,
     };
-    state = { ...state, clients: [...state.clients, client] };
-    persist();
+    setState({ ...state, clients: [client, ...state.clients] });
+
+    void supabase
+      .from("clients")
+      .insert(clientToRow(client) as never)
+      .then(({ error }) => {
+        if (error) {
+          setState({ ...state, clients: state.clients.filter((c) => c.id !== client.id) });
+          reportError("salvar cliente", error);
+        }
+      });
+
     return client;
   },
   findClientByPhone(phone: string): Client | undefined {
@@ -86,78 +215,132 @@ export const store = {
   },
   updateClient(id: string, patch: Partial<Omit<Client, "id" | "createdAt">>) {
     const now = new Date().toISOString();
-    state = {
+    const prev = state.clients.find((c) => c.id === id);
+    if (!prev) return;
+    setState({
       ...state,
       clients: state.clients.map((c) =>
         c.id === id ? { ...c, ...patch, updatedAt: now } : c
       ),
-    };
-    persist();
+    });
+    void supabase
+      .from("clients")
+      .update(clientToRow(patch) as never)
+      .eq("id", id)
+      .then(({ error }) => {
+        if (error) {
+          setState({
+            ...state,
+            clients: state.clients.map((c) => (c.id === id ? prev : c)),
+          });
+          reportError("atualizar cliente", error);
+        }
+      });
   },
   deleteClient(id: string) {
-    state = {
-      ...state,
-      clients: state.clients.filter((c) => c.id !== id),
-    };
-    persist();
+    const prev = state.clients.find((c) => c.id === id);
+    if (!prev) return;
+    setState({ ...state, clients: state.clients.filter((c) => c.id !== id) });
+    void supabase
+      .from("clients")
+      .delete()
+      .eq("id", id)
+      .then(({ error }) => {
+        if (error) {
+          setState({ ...state, clients: [prev, ...state.clients] });
+          reportError("remover cliente", error);
+        }
+      });
   },
 
-  // ── Appointments ───────────────────────────────────────────────────────────
-  addAppointment(
-    input: Omit<Appointment, "id" | "createdAt">
-  ): Appointment {
+  // ── Appointments ─────────────────────────────────────────────────────────
+  addAppointment(input: Omit<Appointment, "id" | "createdAt">): Appointment {
     const appt: Appointment = {
       ...input,
-      id: `a${crypto.randomUUID().slice(0, 8)}`,
+      id: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
     };
-    state = { ...state, appointments: [...state.appointments, appt] };
-    persist();
+    setState({ ...state, appointments: [appt, ...state.appointments] });
+
+    void supabase
+      .from("appointments")
+      .insert(apptToRow(appt) as never)
+      .then(({ error }) => {
+        if (error) {
+          setState({
+            ...state,
+            appointments: state.appointments.filter((a) => a.id !== appt.id),
+          });
+          reportError("salvar agendamento", error);
+        }
+      });
+
     return appt;
   },
   updateAppointment(id: string, patch: Partial<Appointment>) {
-    state = {
+    const prev = state.appointments.find((a) => a.id === id);
+    if (!prev) return;
+    setState({
       ...state,
       appointments: state.appointments.map((a) =>
         a.id === id ? { ...a, ...patch } : a
       ),
-    };
-    persist();
+    });
+    void supabase
+      .from("appointments")
+      .update(apptToRow(patch) as never)
+      .eq("id", id)
+      .then(({ error }) => {
+        if (error) {
+          setState({
+            ...state,
+            appointments: state.appointments.map((a) => (a.id === id ? prev : a)),
+          });
+          reportError("atualizar agendamento", error);
+        }
+      });
   },
   deleteAppointment(id: string) {
-    state = {
+    const prev = state.appointments.find((a) => a.id === id);
+    if (!prev) return;
+    setState({
       ...state,
       appointments: state.appointments.filter((a) => a.id !== id),
-    };
-    persist();
+    });
+    void supabase
+      .from("appointments")
+      .delete()
+      .eq("id", id)
+      .then(({ error }) => {
+        if (error) {
+          setState({ ...state, appointments: [prev, ...state.appointments] });
+          reportError("remover agendamento", error);
+        }
+      });
   },
 
-  // ── Leads ──────────────────────────────────────────────────────────────────
+  // ── Leads (in-memory only — no table yet) ────────────────────────────────
   addLead(input: Omit<Lead, "id" | "createdAt">): Lead {
     const lead: Lead = {
       ...input,
       id: `l${crypto.randomUUID().slice(0, 8)}`,
       createdAt: new Date().toISOString(),
     };
-    state = { ...state, leads: [...state.leads, lead] };
-    persist();
+    setState({ ...state, leads: [...state.leads, lead] });
     return lead;
   },
   updateLead(id: string, patch: Partial<Omit<Lead, "id" | "createdAt">>) {
-    state = {
+    setState({
       ...state,
-      leads: state.leads.map((l) =>
-        l.id === id ? { ...l, ...patch } : l
-      ),
-    };
-    persist();
+      leads: state.leads.map((l) => (l.id === id ? { ...l, ...patch } : l)),
+    });
   },
   deleteLead(id: string) {
-    state = {
-      ...state,
-      leads: state.leads.filter((l) => l.id !== id),
-    };
-    persist();
+    setState({ ...state, leads: state.leads.filter((l) => l.id !== id) });
+  },
+
+  reset() {
+    setState(emptyState);
   },
 };
 
