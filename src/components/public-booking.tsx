@@ -69,6 +69,7 @@ export function PublicBooking() {
       end,
       status: "pending",
       room: "Ensaio",
+      price: (80 * DURATION) / 60,
       notes: form.notes.trim() || undefined,
     });
     setDone({ date: pick.date, start: pick.start, end });
