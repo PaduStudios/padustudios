@@ -213,14 +213,29 @@ export function ImportWizard() {
     setStep("review");
   }
 
-  function doImport() {
-    if (!clientPlan || !apptPlan) return;
-    const result = commit(clientPlan, apptPlan);
-    toast.success("Importação concluída", {
-      description: `${result.clientsCreated} clientes novos · ${result.clientsMerged} atualizados · ${result.appointmentsCreated} ensaios`,
-    });
-    setStep("done");
+  const [importing, setImporting] = useState(false);
+  async function doImport() {
+    if (!clientPlan || !apptPlan || importing) return;
+
+    setImporting(true);
+    const t = toast.loading("Importando… gravando no servidor");
+    try {
+      const result = await commit(clientPlan, apptPlan);
+      toast.success("Importação concluída", {
+        id: t,
+        description: `${result.clientsCreated} clientes novos · ${result.clientsMerged} atualizados · ${result.appointmentsCreated} ensaios`,
+      });
+      setStep("done");
+    } catch (err) {
+      toast.error("Falha na importação", {
+        id: t,
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setImporting(false);
+    }
   }
+
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-6">
