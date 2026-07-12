@@ -291,12 +291,24 @@ function AppointmentBlock({
   onSelect: () => void;
   readOnly?: boolean;
 }) {
+  const isRecording = (appt.room ?? "").toLowerCase().includes("grava");
+  const typeLabel = isRecording ? "Gravação" : "Ensaio";
+
   const statusColor = {
     confirmed: "var(--status-confirmed)",
     pending: "var(--status-pending)",
     blocked: "var(--status-blocked)",
     cancelled: "var(--muted-foreground)",
   }[appt.status];
+
+  // Recording sessions get a more saturated fill to visually stand out
+  // from ensaios, plus a distinct accent color.
+  const accent = isRecording ? "var(--primary)" : statusColor;
+  const bgMix = isRecording ? 55 : 18;
+
+  const bandName = client?.band?.trim();
+  const clientName = client?.name?.trim();
+  const displayTitle = bandName || clientName || "Sem título";
 
   return (
     <motion.button
@@ -319,26 +331,43 @@ function AppointmentBlock({
         height: Math.max(28, height),
         background: readOnly
           ? "color-mix(in oklch, var(--muted-foreground) 12%, var(--surface))"
-          : `color-mix(in oklch, ${statusColor} 18%, var(--surface))`,
+          : `color-mix(in oklch, ${accent} ${bgMix}%, var(--surface))`,
         borderLeft: readOnly
           ? "3px solid var(--muted-foreground)"
-          : `3px solid ${statusColor}`,
+          : `3px solid ${accent}`,
         boxShadow:
           "inset 0 1px 0 color-mix(in oklch, white 5%, transparent), 0 1px 2px color-mix(in oklch, black 40%, transparent)",
       }}
     >
-      <div className="flex min-w-0 items-center gap-1.5">
-        <p className="truncate text-[12px] font-semibold leading-tight">
-          {readOnly ? "Reservado" : (client?.band || client?.name || "Sem título")}
-        </p>
-      </div>
-      {height >= 40 && !readOnly && (
-        <p className="mt-0.5 font-mono text-[10px] font-medium text-muted-foreground">
-          {appt.start} – {appt.end}
-          {appt.room ? ` · ${appt.room}` : ""}
-        </p>
+      {readOnly ? (
+        <div className="flex min-w-0 items-center gap-1.5">
+          <p className="truncate text-[12px] font-semibold leading-tight">
+            Reservado
+          </p>
+        </div>
+      ) : (
+        <>
+          <p
+            className="truncate text-[9px] font-bold uppercase leading-none tracking-[0.14em]"
+            style={{ color: accent }}
+          >
+            {typeLabel}
+          </p>
+          {height >= 34 && (
+            <p className="mt-0.5 truncate text-[12px] font-semibold leading-tight">
+              {displayTitle}
+            </p>
+          )}
+          {height >= 52 && (
+            <p className="mt-0.5 font-mono text-[10px] font-medium text-muted-foreground">
+              {appt.start} – {appt.end}
+              {appt.room && !isRecording ? ` · ${appt.room}` : ""}
+            </p>
+          )}
+        </>
       )}
     </motion.button>
   );
 }
+
 
