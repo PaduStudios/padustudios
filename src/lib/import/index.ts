@@ -36,10 +36,16 @@ export interface ImportOptions {
 }
 
 export interface ClientImportPlan {
-  toCreate: Array<Omit<Client, "id" | "createdAt" | "updatedAt">>;
+  toCreate: Array<
+    Omit<Client, "id" | "createdAt" | "updatedAt"> & {
+      /** Internal key used to link appointments to placeholder-phone clients. */
+      _key?: string;
+    }
+  >;
   toMerge: Array<{ existingId: string; patch: Partial<Client> }>;
   skipped: Array<{ row: number; reason: string }>;
 }
+
 
 export interface AppointmentImportPlan {
   toCreate: Array<
