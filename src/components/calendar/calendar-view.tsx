@@ -105,42 +105,45 @@ export function CalendarView() {
         onToday={() => setAnchor(new Date())}
         isToday={days.some((d) => isSameDay(d, new Date()))}
         onNew={() => openNew()}
+        showNew={isAdmin}
       />
 
       <div className="flex flex-1 gap-6 overflow-hidden p-6">
         {/* LEFT: metrics + grid */}
         <div className="flex min-w-0 flex-1 flex-col gap-5 overflow-hidden">
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-            className="grid grid-cols-3 gap-4"
-          >
-            <MetricCard
-              icon={CalendarCheck}
-              label="Ensaios hoje"
-              value={String(todayAppointments.length)}
-              hint={
-                todayAppointments.length === 0
-                  ? "Nenhum ensaio agendado"
-                  : `${todayAppointments.filter((a) => a.status === "confirmed").length} confirmados`
-              }
-            />
-            <MetricCard
-              icon={TrendingUp}
-              label="Ocupação da semana"
-              value={`${occupancy}%`}
-              hint={`${weekAppointments.length} ensaios · ${days[0].getDate()}–${days[6].getDate()}`}
-              progress={occupancy}
-            />
-            <MetricCard
-              icon={Clock}
-              label="Próximo horário livre"
-              value={mounted && nextFree ? nextFree.start : "—"}
-              hint={mounted ? (nextFree ? nextFree.dayLabel : "Sem janelas nesta semana") : " "}
-              accent
-            />
-          </motion.div>
+          {isAdmin && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+              className="grid grid-cols-3 gap-4"
+            >
+              <MetricCard
+                icon={CalendarCheck}
+                label="Ensaios hoje"
+                value={String(todayAppointments.length)}
+                hint={
+                  todayAppointments.length === 0
+                    ? "Nenhum ensaio agendado"
+                    : `${todayAppointments.filter((a) => a.status === "confirmed").length} confirmados`
+                }
+              />
+              <MetricCard
+                icon={TrendingUp}
+                label="Ocupação da semana"
+                value={`${occupancy}%`}
+                hint={`${weekAppointments.length} ensaios · ${days[0].getDate()}–${days[6].getDate()}`}
+                progress={occupancy}
+              />
+              <MetricCard
+                icon={Clock}
+                label="Próximo horário livre"
+                value={mounted && nextFree ? nextFree.start : "—"}
+                hint={mounted ? (nextFree ? nextFree.dayLabel : "Sem janelas nesta semana") : " "}
+                accent
+              />
+            </motion.div>
+          )}
 
           <motion.div
             initial={{ opacity: 0, y: 12 }}
@@ -153,30 +156,33 @@ export function CalendarView() {
               appointments={appointments}
               clients={clients}
               selectedId={selectedId}
-              onSelect={setSelectedId}
-              onEmptyClick={(date, start) => openNew(date, start)}
+              onSelect={isAdmin ? setSelectedId : () => {}}
+              onEmptyClick={(date, start) => isAdmin && openNew(date, start)}
+              readOnly={!isAdmin}
             />
           </motion.div>
         </div>
 
-        {/* RIGHT: details panel (desktop) */}
-        <aside className="hidden w-[340px] shrink-0 xl:block">
-          <DetailsPanel
-            appointment={selected}
-            client={selectedClient}
-            onClose={() => setSelectedId(null)}
-            onNew={() => openNew()}
-            onEdit={openEdit}
-            todayAppointments={todayAppointments
-              .slice()
-              .sort((a, b) => a.start.localeCompare(b.start))}
-            clientsById={Object.fromEntries(clients.map((c) => [c.id, c]))}
-            onSelectAppointment={setSelectedId}
-          />
-        </aside>
+        {/* RIGHT: details panel (desktop) — admin only */}
+        {isAdmin && (
+          <aside className="hidden w-[340px] shrink-0 xl:block">
+            <DetailsPanel
+              appointment={selected}
+              client={selectedClient}
+              onClose={() => setSelectedId(null)}
+              onNew={() => openNew()}
+              onEdit={openEdit}
+              todayAppointments={todayAppointments
+                .slice()
+                .sort((a, b) => a.start.localeCompare(b.start))}
+              clientsById={Object.fromEntries(clients.map((c) => [c.id, c]))}
+              onSelectAppointment={setSelectedId}
+            />
+          </aside>
+        )}
 
         {/* Mobile / tablet: details as overlay when an appointment is selected */}
-        {selected && (
+        {isAdmin && selected && (
           <div className="fixed inset-0 z-40 xl:hidden">
             <div
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
