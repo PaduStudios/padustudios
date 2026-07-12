@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { useStore } from "@/hooks/use-store";
+import { useAdmin } from "@/hooks/use-admin";
 import { toISODate, weekDays, formatMonthYear } from "@/lib/scheduling/time";
 import { isSlotFree } from "@/lib/scheduling/availability";
 import type { Appointment } from "@/lib/scheduling/types";
@@ -24,6 +25,7 @@ import { cn } from "@/lib/utils";
 
 export function CalendarView() {
   const { appointments, clients } = useStore();
+  const { isAdmin } = useAdmin();
   const [mounted, setMounted] = useState(false);
   const [anchor, setAnchor] = useState<Date>(() => new Date());
   const [selectedId, setSelectedId] = useState<string | null>(null);
