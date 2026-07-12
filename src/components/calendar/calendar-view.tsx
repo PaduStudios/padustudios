@@ -383,10 +383,10 @@ function findNextFreeSlot(
       if (isSlotFree(appointments, iso, start, end)) {
         const dayLabel =
           d === 0
-            ? "Hoje · Sala A"
+            ? "Hoje · Ensaio"
             : d === 1
-              ? "Amanhã · Sala A"
-              : `${format(day, "EEE d", { locale: ptBR })} · Sala A`;
+              ? "Amanhã · Ensaio"
+              : `${format(day, "EEE d", { locale: ptBR })} · Ensaio`;
         return { start, dayLabel };
       }
     }
