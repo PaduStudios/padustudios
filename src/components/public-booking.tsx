@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { useStore } from "@/hooks/use-store";
 import { store } from "@/lib/scheduling/store";
+import { maskBrPhoneInput } from "@/lib/phone";
 import {
   DAY_END_HOUR,
   DAY_START_HOUR,
