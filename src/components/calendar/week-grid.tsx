@@ -178,6 +178,7 @@ function DayColumn({
   selectedId,
   onSelect,
   onEmptyClick,
+  readOnly,
 }: {
   iso: string;
   today: boolean;
@@ -186,6 +187,7 @@ function DayColumn({
   selectedId: string | null;
   onSelect: (id: string) => void;
   onEmptyClick: (date: string, start: string) => void;
+  readOnly?: boolean;
 }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -206,6 +208,7 @@ function DayColumn({
         today && "bg-primary-muted/25"
       )}
       onClick={(e) => {
+        if (readOnly) return;
         // Clicking empty area — compute slot from Y
         if ((e.target as HTMLElement).dataset.slotTarget !== "1") return;
         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -224,7 +227,8 @@ function DayColumn({
           key={i}
           data-slot-target="1"
           className={cn(
-            "absolute inset-x-0 h-[44px] transition-colors hover:bg-primary-muted/40",
+            "absolute inset-x-0 h-[44px] transition-colors",
+            !readOnly && "hover:bg-primary-muted/40",
             i % 2 === 0 ? "border-t border-border" : "border-t border-border/40"
           )}
           style={{ top: i * ROW_HEIGHT }}
@@ -261,12 +265,14 @@ function DayColumn({
             height={height}
             selected={selectedId === appt.id}
             onSelect={() => onSelect(appt.id)}
+            readOnly={readOnly}
           />
         );
       })}
     </div>
   );
 }
+
 
 function AppointmentBlock({
   appt,
