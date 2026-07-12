@@ -25,6 +25,7 @@ export type Database = {
           notes: string | null
           payment_method: string | null
           price: number | null
+          reminder_sent_at: string | null
           room: string | null
           start_time: string
           status: string
@@ -39,6 +40,7 @@ export type Database = {
           notes?: string | null
           payment_method?: string | null
           price?: number | null
+          reminder_sent_at?: string | null
           room?: string | null
           start_time: string
           status?: string
@@ -53,6 +55,7 @@ export type Database = {
           notes?: string | null
           payment_method?: string | null
           price?: number | null
+          reminder_sent_at?: string | null
           room?: string | null
           start_time?: string
           status?: string
@@ -139,6 +142,133 @@ export type Database = {
           id?: string
           kind?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      wa_conversations: {
+        Row: {
+          bot_paused_until: string | null
+          client_id: string | null
+          created_at: string
+          id: string
+          last_message_at: string
+          last_message_preview: string | null
+          phone: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          bot_paused_until?: string | null
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          last_message_preview?: string | null
+          phone: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          bot_paused_until?: string | null
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          last_message_preview?: string | null
+          phone?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_conversations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wa_messages: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          direction: string
+          external_id: string | null
+          id: string
+          sent_by: string
+          text: string
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string
+          direction: string
+          external_id?: string | null
+          id?: string
+          sent_by?: string
+          text: string
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          direction?: string
+          external_id?: string | null
+          id?: string
+          sent_by?: string
+          text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "wa_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wa_settings: {
+        Row: {
+          agent_prompt: string
+          created_at: string
+          enable_faq: boolean
+          enable_reminders: boolean
+          enable_scheduling: boolean
+          evolution_instance: string | null
+          evolution_token: string | null
+          evolution_url: string | null
+          id: string
+          kb_json: Json
+          updated_at: string
+          webhook_secret: string | null
+        }
+        Insert: {
+          agent_prompt?: string
+          created_at?: string
+          enable_faq?: boolean
+          enable_reminders?: boolean
+          enable_scheduling?: boolean
+          evolution_instance?: string | null
+          evolution_token?: string | null
+          evolution_url?: string | null
+          id?: string
+          kb_json?: Json
+          updated_at?: string
+          webhook_secret?: string | null
+        }
+        Update: {
+          agent_prompt?: string
+          created_at?: string
+          enable_faq?: boolean
+          enable_reminders?: boolean
+          enable_scheduling?: boolean
+          evolution_instance?: string | null
+          evolution_token?: string | null
+          evolution_url?: string | null
+          id?: string
+          kb_json?: Json
+          updated_at?: string
+          webhook_secret?: string | null
         }
         Relationships: []
       }
