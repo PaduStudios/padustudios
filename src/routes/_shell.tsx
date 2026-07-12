@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { createFileRoute, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { AppSidebar } from "@/components/app-sidebar";
+import { AppTopbar } from "@/components/app-topbar";
 import { useAdmin } from "@/hooks/use-admin";
 
 export const Route = createFileRoute("/_shell")({
@@ -21,7 +21,7 @@ function ShellLayout() {
   }, [isAdmin, pathname, navigate]);
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-background text-foreground">
+    <div className="flex h-screen w-full flex-col overflow-hidden bg-background text-foreground">
       {/* Ambient red glow — barely visible, gives the surface depth */}
       <div
         aria-hidden
@@ -31,7 +31,7 @@ function ShellLayout() {
             "radial-gradient(1200px 600px at 85% -10%, color-mix(in oklch, var(--primary) 12%, transparent), transparent 60%), radial-gradient(900px 500px at -5% 110%, color-mix(in oklch, var(--primary) 6%, transparent), transparent 70%)",
         }}
       />
-      <AppSidebar />
+      <AppTopbar />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
         <Outlet />
       </div>
