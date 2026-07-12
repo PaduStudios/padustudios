@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Search, Users, MessageCircle, Phone, ArrowUpDown } from "lucide-react";
 import { useStore } from "@/hooks/use-store";
 import { cn } from "@/lib/utils";
+import { formatPhoneSmart, onlyDigits } from "@/lib/phone";
 import { ClientEditDialog } from "./client-edit-dialog";
 import type { Client } from "@/lib/scheduling/types";
 
@@ -15,13 +16,6 @@ const SORT_LABELS: Record<SortKey, string> = {
   "count-asc": "Menos ensaios",
   recent: "Cadastro recente",
 };
-
-function normalizePhone(raw: string): string {
-  const digits = (raw || "").replace(/\D/g, "");
-  // Use last 8 digits (the subscriber part) so variations in country code /
-  // area code / trailing 9 all collapse into the same key.
-  return digits.slice(-8);
-}
 
 export function ClientsView() {
   const { clients, appointments } = useStore();
@@ -36,39 +30,29 @@ export function ClientsView() {
   }
 
   const rows = useMemo(() => {
-    // Group clients that share the same phone (normalized). Pick the most
-    // "complete" record as the primary and aggregate ensaios across all
-    // duplicates in the group.
-    const groups = new Map<string, Client[]>();
-    for (const c of clients) {
-      const key = normalizePhone(c.phone) || `id:${c.id}`;
-      const arr = groups.get(key);
-      if (arr) arr.push(c);
-      else groups.set(key, [c]);
-    }
-
-    const score = (c: Client) =>
-      (c.band ? 2 : 0) + (c.email ? 1 : 0) + (c.cpf ? 1 : 0) + c.name.length / 100;
-
-    const merged: { client: Client; count: number; aliases: number }[] = [];
-    for (const group of groups.values()) {
-      const primary = [...group].sort((a, b) => score(b) - score(a))[0];
-      const ids = new Set(group.map((c) => c.id));
-      const count = appointments.filter((a) => ids.has(a.clientId)).length;
-      merged.push({ client: primary, count, aliases: group.length - 1 });
+    // One row per client — no automatic merging. Duplicates by phone show up
+    // side by side so the operator can unify them manually via the edit dialog.
+    const counts = new Map<string, number>();
+    for (const a of appointments) {
+      counts.set(a.clientId, (counts.get(a.clientId) ?? 0) + 1);
     }
 
     const filtered = q
-      ? merged.filter(
-          ({ client: c }) =>
+      ? clients.filter(
+          (c) =>
             c.name.toLowerCase().includes(q.toLowerCase()) ||
             (c.band ?? "").toLowerCase().includes(q.toLowerCase()) ||
-            c.phone.replace(/\D/g, "").includes(q.replace(/\D/g, ""))
+            onlyDigits(c.phone).includes(q.replace(/\D/g, ""))
         )
-      : merged;
+      : clients;
+
+    const list = filtered.map((client) => ({
+      client,
+      count: counts.get(client.id) ?? 0,
+    }));
 
     const collator = new Intl.Collator("pt-BR", { sensitivity: "base" });
-    filtered.sort((a, b) => {
+    list.sort((a, b) => {
       const nameA = (a.client.band || a.client.name).trim();
       const nameB = (b.client.band || b.client.name).trim();
       switch (sort) {
@@ -84,7 +68,7 @@ export function ClientsView() {
           return b.client.createdAt.localeCompare(a.client.createdAt);
       }
     });
-    return filtered;
+    return list;
   }, [clients, appointments, q, sort]);
 
   return (
@@ -123,7 +107,7 @@ export function ClientsView() {
             <span className="text-right">Ações</span>
           </div>
           <ul>
-            {rows.map(({ client: c, count, aliases }, i) => {
+            {rows.map(({ client: c, count }, i) => {
               const initials = (c.band || c.name)
                 .split(" ")
                 .slice(0, 2)
@@ -144,17 +128,7 @@ export function ClientsView() {
                       {initials}
                     </div>
                     <div className="min-w-0">
-                      <p className="flex items-center gap-1.5 truncate font-semibold">
-                        <span className="truncate">{c.band || c.name}</span>
-                        {aliases > 0 && (
-                          <span
-                            title={`${aliases + 1} cadastros unidos pelo mesmo telefone`}
-                            className="shrink-0 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-px text-[9px] font-bold uppercase tracking-wider text-primary"
-                          >
-                            +{aliases}
-                          </span>
-                        )}
-                      </p>
+                      <p className="truncate font-semibold">{c.band || c.name}</p>
                       {c.band && (
                         <p className="truncate text-[11px] text-muted-foreground">
                           {c.name}
@@ -162,7 +136,9 @@ export function ClientsView() {
                       )}
                     </div>
                   </div>
-                  <span className="truncate font-mono text-[12px]">{c.phone}</span>
+                  <span className="truncate font-mono text-[12px]">
+                    {formatPhoneSmart(c.phone)}
+                  </span>
                   <span className="text-[11.5px] capitalize text-muted-foreground">
                     {c.origin}
                   </span>
@@ -175,7 +151,7 @@ export function ClientsView() {
                     onClick={(e) => e.stopPropagation()}
                   >
                     <a
-                      href={`https://wa.me/${c.phone.replace(/\D/g, "")}`}
+                      href={`https://wa.me/${onlyDigits(c.phone)}`}
                       target="_blank"
                       rel="noreferrer"
                       className="grid h-7 w-7 place-items-center rounded-md border border-border bg-surface transition-colors hover:border-primary/40 hover:text-primary"
