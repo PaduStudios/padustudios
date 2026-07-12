@@ -229,6 +229,7 @@ function Header({
   onToday,
   isToday,
   onNew,
+  showNew = true,
 }: {
   rangeLabel: string;
   monthLabel: string;
@@ -237,6 +238,7 @@ function Header({
   onToday: () => void;
   isToday: boolean;
   onNew: () => void;
+  showNew?: boolean;
 }) {
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center justify-between gap-4 border-b border-border bg-background/70 px-6 backdrop-blur-xl">
@@ -281,30 +283,35 @@ function Header({
       </div>
 
       <div className="flex items-center gap-2">
-        <div className="relative hidden md:block">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Buscar banda, telefone, dia…"
-            className="h-9 w-72 rounded-md border border-border bg-surface pl-8 pr-14 text-[12.5px] outline-none transition-colors placeholder:text-muted-foreground focus:border-border-strong"
-          />
-          <kbd className="pointer-events-none absolute right-2 top-1/2 flex h-5 -translate-y-1/2 items-center gap-0.5 rounded border border-border bg-surface-2 px-1 text-[10px] font-mono text-muted-foreground">
-            <Command className="h-2.5 w-2.5" />K
-          </kbd>
-        </div>
+        {showNew && (
+          <div className="relative hidden md:block">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Buscar banda, telefone, dia…"
+              className="h-9 w-72 rounded-md border border-border bg-surface pl-8 pr-14 text-[12.5px] outline-none transition-colors placeholder:text-muted-foreground focus:border-border-strong"
+            />
+            <kbd className="pointer-events-none absolute right-2 top-1/2 flex h-5 -translate-y-1/2 items-center gap-0.5 rounded border border-border bg-surface-2 px-1 text-[10px] font-mono text-muted-foreground">
+              <Command className="h-2.5 w-2.5" />K
+            </kbd>
+          </div>
+        )}
 
-        <button
-          onClick={onNew}
-          className="flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-[12.5px] font-semibold text-primary-foreground transition-transform active:scale-[0.98]"
-          style={{ boxShadow: "var(--shadow-glow)" }}
-        >
-          <Plus className="h-4 w-4" />
-          Novo agendamento
-        </button>
+        {showNew && (
+          <button
+            onClick={onNew}
+            className="flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-[12.5px] font-semibold text-primary-foreground transition-transform active:scale-[0.98]"
+            style={{ boxShadow: "var(--shadow-glow)" }}
+          >
+            <Plus className="h-4 w-4" />
+            Novo agendamento
+          </button>
+        )}
       </div>
     </header>
   );
 }
+
 
 function MetricCard({
   icon: Icon,
