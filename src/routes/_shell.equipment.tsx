@@ -3,7 +3,7 @@ import { ModulePlaceholder } from "@/components/module-placeholder";
 import { Guitar } from "lucide-react";
 
 export const Route = createFileRoute("/_shell/equipment")({
-  head: () => ({ meta: [{ title: "Equipamentos — Padu OS" }] }),
+  head: () => ({ meta: [{ title: "Equipamentos — Padu Studios" }] }),
   component: () => (
     <ModulePlaceholder
       icon={Guitar}

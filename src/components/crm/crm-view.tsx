@@ -16,6 +16,13 @@ import { useStore } from "@/hooks/use-store";
 import { store } from "@/lib/scheduling/store";
 import { cn } from "@/lib/utils";
 import type { Lead } from "@/lib/scheduling/types";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { toast } from "sonner";
 
 type Tab = "pipeline" | "clientes" | "churn";
 type LeadStatus = Lead["status"];
@@ -520,18 +527,24 @@ export function CrmView() {
     { key: "churn", label: `Sumidos${churnCount ? ` · ${churnCount}` : ""}` },
   ];
 
+  const [leadOpen, setLeadOpen] = useState(false);
+
   return (
     <>
       <header className="sticky top-0 z-20 flex h-16 items-center justify-between gap-4 border-b border-border bg-background/70 px-6 backdrop-blur-xl">
         <div>
-          <p className="text-caption">Padu OS</p>
+          <p className="text-caption">Padu Studios</p>
           <h1 className="text-[15px] font-semibold tracking-tight">CRM</h1>
         </div>
-        <button className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-[12.5px] font-medium text-primary-foreground transition-colors hover:bg-primary/90">
+        <button
+          onClick={() => setLeadOpen(true)}
+          className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-[12.5px] font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+        >
           <Plus className="h-3.5 w-3.5" />
           Novo lead
         </button>
       </header>
+      <NewLeadDialog open={leadOpen} onOpenChange={setLeadOpen} />
 
       <div className="grid grid-cols-4 gap-px border-b border-border bg-border">
         {stats.map((s) => (
@@ -569,4 +582,151 @@ export function CrmView() {
     </>
   );
 }
+
+function NewLeadDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+}) {
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [desiredDate, setDesiredDate] = useState("");
+  const [desiredStart, setDesiredStart] = useState("20:00");
+  const [desiredEnd, setDesiredEnd] = useState("22:00");
+  const [reason, setReason] = useState("");
+
+  function reset() {
+    setName("");
+    setPhone("");
+    setDesiredDate("");
+    setDesiredStart("20:00");
+    setDesiredEnd("22:00");
+    setReason("");
+  }
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!name.trim() || !phone.trim()) {
+      toast.error("Nome e telefone são obrigatórios");
+      return;
+    }
+    store.addLead({
+      name: name.trim(),
+      phone: phone.trim(),
+      desiredDate: desiredDate || new Date().toISOString().slice(0, 10),
+      desiredStart,
+      desiredEnd,
+      reason: reason.trim() || "Contato manual",
+      status: "open",
+    });
+    toast.success("Lead adicionado");
+    reset();
+    onOpenChange(false);
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) reset();
+        onOpenChange(o);
+      }}
+    >
+      <DialogContent className="max-w-md border-border-strong bg-surface p-0">
+        <div className="border-b border-border px-5 py-4">
+          <DialogTitle className="text-[14px] font-semibold">Novo lead</DialogTitle>
+          <DialogDescription className="text-[11.5px] text-muted-foreground">
+            Registre um contato interessado para acompanhar no pipeline.
+          </DialogDescription>
+        </div>
+        <form onSubmit={submit} className="space-y-3 p-5">
+          <label className="block">
+            <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Nome *
+            </span>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="h-10 w-full rounded-md border border-border bg-surface-2 px-3 text-[13px] outline-none focus:border-primary/50"
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Telefone *
+            </span>
+            <input
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="h-10 w-full rounded-md border border-border bg-surface-2 px-3 text-[13px] outline-none focus:border-primary/50"
+            />
+          </label>
+          <div className="grid grid-cols-3 gap-2">
+            <label className="col-span-3 block sm:col-span-1">
+              <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Data desejada
+              </span>
+              <input
+                type="date"
+                value={desiredDate}
+                onChange={(e) => setDesiredDate(e.target.value)}
+                className="h-10 w-full rounded-md border border-border bg-surface-2 px-2 text-[13px] outline-none focus:border-primary/50"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Início
+              </span>
+              <input
+                type="time"
+                value={desiredStart}
+                onChange={(e) => setDesiredStart(e.target.value)}
+                className="h-10 w-full rounded-md border border-border bg-surface-2 px-2 font-mono text-[13px] outline-none focus:border-primary/50"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Fim
+              </span>
+              <input
+                type="time"
+                value={desiredEnd}
+                onChange={(e) => setDesiredEnd(e.target.value)}
+                className="h-10 w-full rounded-md border border-border bg-surface-2 px-2 font-mono text-[13px] outline-none focus:border-primary/50"
+              />
+            </label>
+          </div>
+          <label className="block">
+            <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Observações
+            </span>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              rows={3}
+              className="w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[13px] outline-none focus:border-primary/50"
+            />
+          </label>
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => onOpenChange(false)}
+              className="h-9 rounded-md border border-border px-3 text-[12.5px] font-semibold text-muted-foreground hover:text-foreground"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="h-9 rounded-md bg-primary px-4 text-[12.5px] font-semibold text-primary-foreground hover:opacity-90"
+            >
+              Salvar lead
+            </button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 

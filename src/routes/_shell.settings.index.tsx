@@ -3,7 +3,7 @@ import { Download, Settings as SettingsIcon, ChevronRight } from "lucide-react";
 
 export const Route = createFileRoute("/_shell/settings/")({
   head: () => ({
-    meta: [{ title: "Configurações — Padu OS" }],
+    meta: [{ title: "Configurações — Padu Studios" }],
   }),
   component: SettingsIndex,
 });

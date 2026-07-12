@@ -4,7 +4,7 @@ import { DashboardView } from "@/components/dashboard/dashboard-view";
 export const Route = createFileRoute("/_shell/dashboard")({
   head: () => ({
     meta: [
-      { title: "Dashboard — Padu OS" },
+      { title: "Dashboard — Padu Studios" },
       {
         name: "description",
         content:

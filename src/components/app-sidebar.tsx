@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   Calendar,
@@ -9,34 +10,44 @@ import {
   Settings,
   LayoutGrid,
   ChevronsUpDown,
+  Lock,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAdmin } from "@/hooks/use-admin";
+import { AdminLoginDialog } from "@/components/admin-login-dialog";
 
 interface NavItem {
   to: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   soon?: boolean;
+  adminOnly?: boolean;
 }
 
 const primary: NavItem[] = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutGrid, soon: true },
+  { to: "/dashboard", label: "Dashboard", icon: LayoutGrid, adminOnly: true },
   { to: "/calendar", label: "Calendário", icon: Calendar },
-  { to: "/clients", label: "Clientes", icon: Users },
+  { to: "/clients", label: "Clientes", icon: Users, adminOnly: true },
 ];
 
 const business: NavItem[] = [
-  { to: "/crm", label: "CRM", icon: Sparkles, soon: true },
-  { to: "/finance", label: "Financeiro", icon: Wallet, soon: true },
+  { to: "/crm", label: "CRM", icon: Sparkles, adminOnly: true },
+  { to: "/finance", label: "Financeiro", icon: Wallet, adminOnly: true },
 ];
 
 const operations: NavItem[] = [
-  { to: "/equipment", label: "Equipamentos", icon: Guitar, soon: true },
-  { to: "/automation", label: "Automação", icon: Zap, soon: true },
+  { to: "/equipment", label: "Equipamentos", icon: Guitar, soon: true, adminOnly: true },
+  { to: "/automation", label: "Automação", icon: Zap, soon: true, adminOnly: true },
 ];
 
 export function AppSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { isAdmin, hasCreds, logout } = useAdmin();
+  const [loginOpen, setLoginOpen] = useState(false);
+
+  const filter = (items: NavItem[]) =>
+    items.filter((i) => isAdmin || !i.adminOnly);
 
   return (
     <aside className="hidden w-[240px] shrink-0 flex-col border-r border-border bg-surface/40 backdrop-blur-xl md:flex">
@@ -49,7 +60,7 @@ export function AppSidebar() {
           P.
         </div>
         <div className="min-w-0 leading-none">
-          <p className="text-[13px] font-bold tracking-tight">Padu OS</p>
+          <p className="text-[13px] font-bold tracking-tight">Padu Studios</p>
           <p className="mt-1 text-[10px] font-medium text-muted-foreground">
             Studios · Teodoro
           </p>
@@ -57,36 +68,64 @@ export function AppSidebar() {
       </div>
 
       <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-2">
-        <NavGroup items={primary} pathname={pathname} />
-        <NavGroup label="Negócio" items={business} pathname={pathname} />
-        <NavGroup label="Operação" items={operations} pathname={pathname} />
+        <NavGroup items={filter(primary)} pathname={pathname} />
+        {isAdmin && (
+          <>
+            <NavGroup label="Negócio" items={filter(business)} pathname={pathname} />
+            <NavGroup label="Operação" items={filter(operations)} pathname={pathname} />
+          </>
+        )}
       </nav>
 
       {/* Footer */}
       <div className="border-t border-border p-3">
-        <Link
-          to="/settings"
-          className={cn(
-            "flex items-center gap-3 rounded-md px-2 py-1.5 text-[13px] font-medium text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground",
-            pathname === "/settings" && "bg-surface-2 text-foreground"
-          )}
+        {isAdmin && (
+          <Link
+            to="/settings"
+            className={cn(
+              "flex items-center gap-3 rounded-md px-2 py-1.5 text-[13px] font-medium text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground",
+              pathname === "/settings" && "bg-surface-2 text-foreground"
+            )}
+          >
+            <Settings className="h-4 w-4" />
+            Configurações
+          </Link>
+        )}
+
+        <button
+          onClick={() => (isAdmin ? logout() : setLoginOpen(true))}
+          className="mt-2 flex w-full items-center gap-2 rounded-md border border-border bg-surface-2 px-2 py-1.5 text-[12px] font-semibold text-foreground transition-colors hover:bg-surface-3"
         >
-          <Settings className="h-4 w-4" />
-          Configurações
-        </Link>
-        <button className="mt-2 flex w-full items-center gap-3 rounded-md p-2 text-left transition-colors hover:bg-surface-2">
-          <div className="grid h-7 w-7 place-items-center rounded-full bg-surface-3 text-[11px] font-bold">
-            P
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-[12px] font-semibold">Padu</p>
-            <p className="truncate text-[10px] text-muted-foreground">
-              admin@padustudios.com
-            </p>
-          </div>
-          <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+          {isAdmin ? (
+            <>
+              <LogOut className="h-3.5 w-3.5" />
+              Sair do admin
+            </>
+          ) : (
+            <>
+              <Lock className="h-3.5 w-3.5" />
+              {hasCreds ? "Login Admin" : "Criar acesso admin"}
+            </>
+          )}
         </button>
+
+        {isAdmin && (
+          <button className="mt-2 flex w-full items-center gap-3 rounded-md p-2 text-left transition-colors hover:bg-surface-2">
+            <div className="grid h-7 w-7 place-items-center rounded-full bg-surface-3 text-[11px] font-bold">
+              P
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[12px] font-semibold">Padu</p>
+              <p className="truncate text-[10px] text-muted-foreground">
+                admin@padustudios.com
+              </p>
+            </div>
+            <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+          </button>
+        )}
       </div>
+
+      <AdminLoginDialog open={loginOpen} onOpenChange={setLoginOpen} />
     </aside>
   );
 }
@@ -100,6 +139,7 @@ function NavGroup({
   items: NavItem[];
   pathname: string;
 }) {
+  if (items.length === 0) return null;
   return (
     <div>
       {label && (

@@ -77,6 +77,7 @@ export function NewAppointmentDialog({
   const [notes, setNotes] = useState("");
   const [price, setPrice] = useState<string>("");
   const [priceTouched, setPriceTouched] = useState(false);
+  const [discount, setDiscount] = useState<string>("");
 
   useEffect(() => {
     if (!open) return;
@@ -94,6 +95,7 @@ export function NewAppointmentDialog({
       setNotes(editing.notes ?? "");
       setPrice(editing.price != null ? String(editing.price) : "");
       setPriceTouched(editing.price != null);
+      setDiscount("");
     } else {
       setDate(seed?.date ?? "");
       setStart(seed?.start ?? "20:00");
@@ -104,6 +106,7 @@ export function NewAppointmentDialog({
       setNotes("");
       setPrice("");
       setPriceTouched(false);
+      setDiscount("");
     }
     setClientQuery("");
     setNewClient({
@@ -122,6 +125,21 @@ export function NewAppointmentDialog({
     const suggested = suggestedPrice(room, duration);
     setPrice(suggested != null ? String(suggested) : "");
   }, [room, duration, priceTouched]);
+
+  // Computed final price after percentage discount.
+  const discountPct = useMemo(() => {
+    const n = Number(discount);
+    if (!Number.isFinite(n)) return 0;
+    return Math.max(0, Math.min(100, n));
+  }, [discount]);
+  const basePrice = useMemo(() => {
+    const n = Number(price);
+    return Number.isFinite(n) ? n : 0;
+  }, [price]);
+  const finalPrice = useMemo(
+    () => Math.max(0, basePrice * (1 - discountPct / 100)),
+    [basePrice, discountPct]
+  );
 
   const end = useMemo(() => addMinutesToTime(start, duration), [start, duration]);
 
@@ -191,8 +209,10 @@ export function NewAppointmentDialog({
     }
 
     const parsedPrice = price.trim() === "" ? undefined : Number(price);
-    const priceValue =
+    const gross =
       parsedPrice != null && Number.isFinite(parsedPrice) ? parsedPrice : undefined;
+    const priceValue =
+      gross != null ? Math.max(0, gross * (1 - discountPct / 100)) : undefined;
 
     if (editing) {
       store.updateAppointment(editing.id, {
@@ -253,7 +273,7 @@ export function NewAppointmentDialog({
             </div>
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
-                Padu OS · {editing ? "Editar ensaio" : "Agendamento"}
+                Padu Studios · {editing ? "Editar ensaio" : "Agendamento"}
               </p>
               <p className="text-[14px] font-semibold">
                 {step === "when" ? "Data e horário" : "Quem vai ensaiar?"}
@@ -365,6 +385,33 @@ export function NewAppointmentDialog({
                     "Gravação por canal é orçada à parte."}
                 </p>
               </Field>
+
+              <Field label="Desconto (%)">
+                <div className="relative">
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    max={100}
+                    step="1"
+                    value={discount}
+                    onChange={(e) => setDiscount(e.target.value)}
+                    placeholder="0"
+                    className="h-10 w-full rounded-md border border-border bg-surface-2 pr-8 pl-3 font-mono text-[13px] font-medium outline-none focus:border-primary/50"
+                  />
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 font-mono text-[12px] text-muted-foreground">
+                    %
+                  </span>
+                </div>
+                {discountPct > 0 && basePrice > 0 && (
+                  <p className="mt-1.5 text-[11px] text-muted-foreground">
+                    Valor final: <span className="font-mono font-semibold text-foreground">R$ {finalPrice.toFixed(2)}</span>{" "}
+                    (desconto de R$ {(basePrice - finalPrice).toFixed(2)})
+                  </p>
+                )}
+              </Field>
+
+
 
 
               {/* Availability feedback */}

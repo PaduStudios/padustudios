@@ -17,7 +17,7 @@ function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center px-4">
       <div className="max-w-md text-center">
-        <p className="text-caption">Padu OS</p>
+        <p className="text-caption">Padu Studios</p>
         <h1 className="mt-3 text-6xl font-bold tracking-tight">404</h1>
         <h2 className="mt-3 text-lg font-semibold">Página não encontrada</h2>
         <p className="mt-2 text-sm text-muted-foreground">
@@ -80,14 +80,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Padu OS — Agenda inteligente do estúdio" },
+      { title: "Padu Studios — Agenda inteligente do estúdio" },
       {
         name: "description",
         content:
-          "Padu OS é o sistema operacional da Padu Studios: agendamento inteligente, clientes, CRM e automação em um só lugar.",
+          "Padu Studios é o sistema operacional da Padu Studios: agendamento inteligente, clientes, CRM e automação em um só lugar.",
       },
       { name: "theme-color", content: "#050505" },
-      { property: "og:title", content: "Padu OS — Agenda inteligente" },
+      { property: "og:title", content: "Padu Studios — Agenda inteligente" },
       {
         property: "og:description",
         content: "O sistema operacional da Padu Studios.",

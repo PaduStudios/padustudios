@@ -4,7 +4,7 @@ import { FinanceView } from "@/components/finance/finance-view";
 export const Route = createFileRoute("/_shell/finance")({
   head: () => ({
     meta: [
-      { title: "Financeiro — Padu OS" },
+      { title: "Financeiro — Padu Studios" },
       {
         name: "description",
         content:

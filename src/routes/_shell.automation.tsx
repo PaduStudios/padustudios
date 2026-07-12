@@ -3,7 +3,7 @@ import { ModulePlaceholder } from "@/components/module-placeholder";
 import { Zap } from "lucide-react";
 
 export const Route = createFileRoute("/_shell/automation")({
-  head: () => ({ meta: [{ title: "Automação — Padu OS" }] }),
+  head: () => ({ meta: [{ title: "Automação — Padu Studios" }] }),
   component: () => (
     <ModulePlaceholder
       icon={Zap}
