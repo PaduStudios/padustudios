@@ -421,7 +421,7 @@ function ChurnTab() {
                   </p>
                 )}
               </div>
-              <span className="truncate font-mono text-[12px]">{c.phone}</span>
+              <span className="truncate font-mono text-[12px]">{formatPhoneSmart(c.phone)}</span>
               <span className="flex items-center justify-end gap-1 tabular-nums">
                 <Users className="h-3 w-3 text-muted-foreground" />
                 {count}
