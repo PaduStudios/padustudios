@@ -520,18 +520,24 @@ export function CrmView() {
     { key: "churn", label: `Sumidos${churnCount ? ` · ${churnCount}` : ""}` },
   ];
 
+  const [leadOpen, setLeadOpen] = useState(false);
+
   return (
     <>
       <header className="sticky top-0 z-20 flex h-16 items-center justify-between gap-4 border-b border-border bg-background/70 px-6 backdrop-blur-xl">
         <div>
-          <p className="text-caption">Padu OS</p>
+          <p className="text-caption">Padu Studios</p>
           <h1 className="text-[15px] font-semibold tracking-tight">CRM</h1>
         </div>
-        <button className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-[12.5px] font-medium text-primary-foreground transition-colors hover:bg-primary/90">
+        <button
+          onClick={() => setLeadOpen(true)}
+          className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-[12.5px] font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+        >
           <Plus className="h-3.5 w-3.5" />
           Novo lead
         </button>
       </header>
+      <NewLeadDialog open={leadOpen} onOpenChange={setLeadOpen} />
 
       <div className="grid grid-cols-4 gap-px border-b border-border bg-border">
         {stats.map((s) => (
