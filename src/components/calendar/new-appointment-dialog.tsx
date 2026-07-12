@@ -190,6 +190,10 @@ export function NewAppointmentDialog({
       return;
     }
 
+    const parsedPrice = price.trim() === "" ? undefined : Number(price);
+    const priceValue =
+      parsedPrice != null && Number.isFinite(parsedPrice) ? parsedPrice : undefined;
+
     if (editing) {
       store.updateAppointment(editing.id, {
         clientId,
@@ -197,6 +201,7 @@ export function NewAppointmentDialog({
         start,
         end,
         room,
+        price: priceValue,
         notes: notes.trim() || undefined,
       });
       const updated = store.getSnapshot().appointments.find((a) => a.id === editing.id);
@@ -216,6 +221,7 @@ export function NewAppointmentDialog({
       end,
       status: "confirmed",
       room,
+      price: priceValue,
       notes: notes.trim() || undefined,
     });
     const client = store.getSnapshot().clients.find((c) => c.id === clientId);
