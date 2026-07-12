@@ -95,6 +95,7 @@ export function NewAppointmentDialog({
       setNotes(editing.notes ?? "");
       setPrice(editing.price != null ? String(editing.price) : "");
       setPriceTouched(editing.price != null);
+      setDiscount("");
     } else {
       setDate(seed?.date ?? "");
       setStart(seed?.start ?? "20:00");
@@ -105,6 +106,7 @@ export function NewAppointmentDialog({
       setNotes("");
       setPrice("");
       setPriceTouched(false);
+      setDiscount("");
     }
     setClientQuery("");
     setNewClient({
