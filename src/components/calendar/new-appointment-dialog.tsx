@@ -90,16 +90,20 @@ export function NewAppointmentDialog({
       setDuration(dur);
       setMode("existing");
       setSelectedClientId(editing.clientId);
-      setRoom(editing.room ?? "Sala A");
+      setRoom(editing.room ?? "Ensaio");
       setNotes(editing.notes ?? "");
+      setPrice(editing.price != null ? String(editing.price) : "");
+      setPriceTouched(editing.price != null);
     } else {
       setDate(seed?.date ?? "");
       setStart(seed?.start ?? "20:00");
       setDuration(120);
       setMode("existing");
       setSelectedClientId("");
-      setRoom("Sala A");
+      setRoom("Ensaio");
       setNotes("");
+      setPrice("");
+      setPriceTouched(false);
     }
     setClientQuery("");
     setNewClient({
@@ -111,6 +115,13 @@ export function NewAppointmentDialog({
       origin: "whatsapp",
     });
   }, [open, seed, editing]);
+
+  // Auto-fill the price when the user hasn't manually edited it.
+  useEffect(() => {
+    if (priceTouched) return;
+    const suggested = suggestedPrice(room, duration);
+    setPrice(suggested != null ? String(suggested) : "");
+  }, [room, duration, priceTouched]);
 
   const end = useMemo(() => addMinutesToTime(start, duration), [start, duration]);
 
