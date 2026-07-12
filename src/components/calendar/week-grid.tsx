@@ -21,6 +21,7 @@ interface Props {
   selectedId: string | null;
   onSelect: (id: string) => void;
   onEmptyClick: (date: string, start: string) => void;
+  readOnly?: boolean;
 }
 
 export function WeekGrid({
@@ -30,6 +31,7 @@ export function WeekGrid({
   selectedId,
   onSelect,
   onEmptyClick,
+  readOnly = false,
 }: Props) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const clientMap = new Map(clients.map((c) => [c.id, c] as const));
