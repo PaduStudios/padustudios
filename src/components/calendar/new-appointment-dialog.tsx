@@ -126,6 +126,21 @@ export function NewAppointmentDialog({
     setPrice(suggested != null ? String(suggested) : "");
   }, [room, duration, priceTouched]);
 
+  // Computed final price after percentage discount.
+  const discountPct = useMemo(() => {
+    const n = Number(discount);
+    if (!Number.isFinite(n)) return 0;
+    return Math.max(0, Math.min(100, n));
+  }, [discount]);
+  const basePrice = useMemo(() => {
+    const n = Number(price);
+    return Number.isFinite(n) ? n : 0;
+  }, [price]);
+  const finalPrice = useMemo(
+    () => Math.max(0, basePrice * (1 - discountPct / 100)),
+    [basePrice, discountPct]
+  );
+
   const end = useMemo(() => addMinutesToTime(start, duration), [start, duration]);
 
   // When editing, ignore the row being edited so the same slot doesn't
