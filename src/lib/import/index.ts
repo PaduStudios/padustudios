@@ -265,18 +265,16 @@ export function buildAppointmentPlan(
       return;
     }
 
-    // Locate client — try the compound (phone+name) key first, then fall back to name.
-    // For placeholder phones, we key by row so each appointment matches its own client
-    // (created in the same order in buildClientPlan).
+    // Locate client. In combined mode the appointment row IS the client row,
+    // so we can recompute the same plan key and look it up directly. This
+    // keeps placeholder-phone appointments tied to the exact client created
+    // for that row, without collapsing distinct people onto one client.
     const phone = normalizePhone(pickCell(row, mapping.phone));
     const userName = pickCell(row, mapping.userName);
-    let clientKey: string | undefined;
-    if (!isPlaceholderPhone(phone)) {
+    const planKey = clientKeyForRow(rowNum, userName, phone);
+    let clientKey: string | undefined = index.byPlanKey.get(planKey);
+    if (!clientKey && !isPlaceholderPhone(phone)) {
       clientKey = index.byCompound.get(`v:${phone}|${normName(userName)}`);
-    } else {
-      // Placeholder phone: match the new client created for this same row.
-      // buildClientPlan preserves row order, so `new:<idx>` aligns with rowNum-2.
-      clientKey = `new:${idx}`;
     }
     if (!clientKey && userName) clientKey = index.byName.get(normName(userName));
     if (!clientKey) {
@@ -286,6 +284,7 @@ export function buildAppointmentPlan(
       });
       return;
     }
+
 
 
     const baseNotes = pickCell(row, mapping.notes) || "";
