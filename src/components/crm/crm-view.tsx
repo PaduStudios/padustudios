@@ -10,14 +10,19 @@ import {
   Calendar,
   Clock,
   Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import { useStore } from "@/hooks/use-store";
 import { store } from "@/lib/scheduling/store";
 import { cn } from "@/lib/utils";
 import type { Lead } from "@/lib/scheduling/types";
 
-type Tab = "pipeline" | "clientes";
+type Tab = "pipeline" | "clientes" | "churn";
 type LeadStatus = Lead["status"];
+
+/** Churn rule: ≥3 confirmed appointments and no visit in the last N days. */
+const CHURN_MIN_APPTS = 3;
+const CHURN_DAYS_INACTIVE = 30;
 
 const COLUMNS: { key: LeadStatus; label: string; accent: string }[] = [
   { key: "open",      label: "Abertos",     accent: "text-primary border-primary/30" },
@@ -318,10 +323,171 @@ function ClientesTab() {
   );
 }
 
+// ── Churn Tab ────────────────────────────────────────────────────────────────
+function ChurnTab() {
+  const { clients, appointments } = useStore();
+
+  const churned = useMemo(() => {
+    const now = Date.now();
+    const cutoffMs = now - CHURN_DAYS_INACTIVE * 24 * 60 * 60 * 1000;
+    const byClient = new Map<string, { count: number; lastMs: number; lastDate: string }>();
+    for (const a of appointments) {
+      if (a.status === "cancelled" || a.status === "blocked") continue;
+      const t = Date.parse(a.date);
+      if (isNaN(t)) continue;
+      const cur = byClient.get(a.clientId);
+      if (!cur) {
+        byClient.set(a.clientId, { count: 1, lastMs: t, lastDate: a.date });
+      } else {
+        cur.count += 1;
+        if (t > cur.lastMs) {
+          cur.lastMs = t;
+          cur.lastDate = a.date;
+        }
+      }
+    }
+    const rows = clients
+      .map((c) => ({
+        client: c,
+        stats: byClient.get(c.id),
+      }))
+      .filter(
+        (r): r is { client: typeof r.client; stats: NonNullable<typeof r.stats> } =>
+          !!r.stats &&
+          r.stats.count >= CHURN_MIN_APPTS &&
+          r.stats.lastMs < cutoffMs
+      )
+      .map((r) => ({
+        client: r.client,
+        count: r.stats.count,
+        lastDate: r.stats.lastDate,
+        daysSince: Math.floor((now - r.stats.lastMs) / (24 * 60 * 60 * 1000)),
+      }));
+    rows.sort((a, b) => b.daysSince - a.daysSince);
+    return rows;
+  }, [clients, appointments]);
+
+  return (
+    <div className="flex-1 overflow-y-auto p-6">
+      <div className="mb-4 flex items-start gap-3 rounded-md border border-[color:var(--status-pending)]/25 bg-[color:var(--status-pending)]/5 p-4">
+        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--status-pending)]" />
+        <div>
+          <p className="text-[13px] font-semibold">
+            Clientes que ensaiavam bastante e sumiram
+          </p>
+          <p className="mt-0.5 text-[11.5px] text-muted-foreground">
+            Regra: pelo menos {CHURN_MIN_APPTS} ensaios no histórico e sem
+            aparecer nos últimos {CHURN_DAYS_INACTIVE} dias. Um toque no WhatsApp
+            costuma trazer de volta.
+          </p>
+        </div>
+      </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="surface-panel overflow-hidden"
+      >
+        <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_100px_100px_120px] border-b border-border px-5 py-3 text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+          <span>Banda / Cliente</span>
+          <span>Telefone</span>
+          <span className="text-right">Ensaios</span>
+          <span className="text-right">Última visita</span>
+          <span className="text-right">Reengajar</span>
+        </div>
+        <ul>
+          {churned.map(({ client: c, count, lastDate, daysSince }, i) => (
+            <li
+              key={c.id}
+              className={cn(
+                "grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_100px_100px_120px] items-center gap-2 border-b border-border px-5 py-3.5 text-[13px] last:border-b-0",
+                i % 2 === 1 && "bg-surface-2/20"
+              )}
+            >
+              <div className="min-w-0">
+                <p className="truncate font-semibold">{c.band || c.name}</p>
+                {c.band && (
+                  <p className="truncate text-[11px] text-muted-foreground">
+                    {c.name}
+                  </p>
+                )}
+              </div>
+              <span className="truncate font-mono text-[12px]">{c.phone}</span>
+              <span className="flex items-center justify-end gap-1 tabular-nums">
+                <Users className="h-3 w-3 text-muted-foreground" />
+                {count}
+              </span>
+              <div className="text-right">
+                <p className="text-[12px] tabular-nums">{formatShortDate(lastDate)}</p>
+                <p className="text-[10.5px] text-[color:var(--status-pending)]">
+                  há {daysSince}d
+                </p>
+              </div>
+              <div className="flex items-center justify-end gap-1">
+                <a
+                  href={`https://wa.me/${c.phone.replace(/\D/g, "")}?text=${encodeURIComponent(
+                    `Oi ${c.name.split(" ")[0]}, saudade de ver vocês por aqui! Bora marcar um ensaio?`
+                  )}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="grid h-7 w-7 place-items-center rounded-md border border-border bg-surface transition-colors hover:border-primary/40 hover:text-primary"
+                  title="Reengajar via WhatsApp"
+                >
+                  <MessageCircle className="h-3.5 w-3.5" />
+                </a>
+                <a
+                  href={`tel:${c.phone}`}
+                  className="grid h-7 w-7 place-items-center rounded-md border border-border bg-surface transition-colors hover:text-foreground"
+                  title="Ligar"
+                >
+                  <Phone className="h-3.5 w-3.5" />
+                </a>
+              </div>
+            </li>
+          ))}
+          {churned.length === 0 && (
+            <li className="px-5 py-12 text-center text-[13px] text-muted-foreground">
+              Ninguém sumiu ainda. Boa retenção. 🎸
+            </li>
+          )}
+        </ul>
+      </motion.div>
+    </div>
+  );
+}
+
+function formatShortDate(iso: string) {
+  const d = new Date(iso + "T00:00:00");
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+}
+
 // ── Root ─────────────────────────────────────────────────────────────────────
 export function CrmView() {
   const [tab, setTab] = useState<Tab>("pipeline");
-  const { leads, clients } = useStore();
+  const { leads, clients, appointments } = useStore();
+
+  const churnCount = useMemo(() => {
+    const now = Date.now();
+    const cutoffMs = now - CHURN_DAYS_INACTIVE * 24 * 60 * 60 * 1000;
+    const by = new Map<string, { count: number; lastMs: number }>();
+    for (const a of appointments) {
+      if (a.status === "cancelled" || a.status === "blocked") continue;
+      const t = Date.parse(a.date);
+      if (isNaN(t)) continue;
+      const cur = by.get(a.clientId);
+      if (!cur) by.set(a.clientId, { count: 1, lastMs: t });
+      else {
+        cur.count++;
+        if (t > cur.lastMs) cur.lastMs = t;
+      }
+    }
+    let n = 0;
+    for (const [, v] of by) {
+      if (v.count >= CHURN_MIN_APPTS && v.lastMs < cutoffMs) n++;
+    }
+    return n;
+  }, [appointments]);
 
   const stats = [
     {
@@ -329,12 +495,12 @@ export function CrmView() {
       value: leads.filter((l) => l.status === "open").length,
     },
     {
-      label: "Convertidos",
-      value: leads.filter((l) => l.status === "converted").length,
-    },
-    {
       label: "Total clientes",
       value: clients.length,
+    },
+    {
+      label: "Clientes sumidos",
+      value: churnCount,
     },
     {
       label: "Taxa conversão",
@@ -348,9 +514,14 @@ export function CrmView() {
     },
   ];
 
+  const tabs: { key: Tab; label: string }[] = [
+    { key: "pipeline", label: "Pipeline" },
+    { key: "clientes", label: "Clientes" },
+    { key: "churn", label: `Sumidos${churnCount ? ` · ${churnCount}` : ""}` },
+  ];
+
   return (
     <>
-      {/* Header */}
       <header className="sticky top-0 z-20 flex h-16 items-center justify-between gap-4 border-b border-border bg-background/70 px-6 backdrop-blur-xl">
         <div>
           <p className="text-caption">Padu OS</p>
@@ -362,7 +533,6 @@ export function CrmView() {
         </button>
       </header>
 
-      {/* Stats bar */}
       <div className="grid grid-cols-4 gap-px border-b border-border bg-border">
         {stats.map((s) => (
           <div key={s.label} className="bg-background px-6 py-4">
@@ -374,28 +544,29 @@ export function CrmView() {
         ))}
       </div>
 
-      {/* Tab nav */}
       <div className="flex gap-1 border-b border-border px-6 pt-4">
-        {(["pipeline", "clientes"] as Tab[]).map((t) => (
+        {tabs.map((t) => (
           <button
-            key={t}
-            onClick={() => setTab(t)}
+            key={t.key}
+            onClick={() => setTab(t.key)}
             className={cn(
-              "rounded-t-md px-4 py-2 text-[12.5px] font-medium capitalize transition-colors",
-              tab === t
+              "rounded-t-md px-4 py-2 text-[12.5px] font-medium transition-colors",
+              tab === t.key
                 ? "border-b-2 border-primary text-primary"
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
-            {t === "pipeline" ? "Pipeline" : "Clientes"}
+            {t.label}
           </button>
         ))}
       </div>
 
-      {/* Content */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        {tab === "pipeline" ? <PipelineTab /> : <ClientesTab />}
+        {tab === "pipeline" && <PipelineTab />}
+        {tab === "clientes" && <ClientesTab />}
+        {tab === "churn" && <ChurnTab />}
       </div>
     </>
   );
 }
+

@@ -1,14 +1,25 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Search, Users, MessageCircle, Phone } from "lucide-react";
+import { Search, Users, MessageCircle, Phone, ArrowUpDown } from "lucide-react";
 import { useStore } from "@/hooks/use-store";
 import { cn } from "@/lib/utils";
 import { ClientEditDialog } from "./client-edit-dialog";
 import type { Client } from "@/lib/scheduling/types";
 
+type SortKey = "name-asc" | "name-desc" | "count-desc" | "count-asc" | "recent";
+
+const SORT_LABELS: Record<SortKey, string> = {
+  "name-asc": "Nome A → Z",
+  "name-desc": "Nome Z → A",
+  "count-desc": "Mais ensaios",
+  "count-asc": "Menos ensaios",
+  recent: "Cadastro recente",
+};
+
 export function ClientsView() {
   const { clients, appointments } = useStore();
   const [q, setQ] = useState("");
+  const [sort, setSort] = useState<SortKey>("name-asc");
   const [editing, setEditing] = useState<Client | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -26,11 +37,29 @@ export function ClientsView() {
             c.phone.replace(/\D/g, "").includes(q.replace(/\D/g, ""))
         )
       : clients;
-    return filtered.map((c) => ({
+    const withCount = filtered.map((c) => ({
       client: c,
       count: appointments.filter((a) => a.clientId === c.id).length,
     }));
-  }, [clients, appointments, q]);
+    const collator = new Intl.Collator("pt-BR", { sensitivity: "base" });
+    withCount.sort((a, b) => {
+      const nameA = (a.client.band || a.client.name).trim();
+      const nameB = (b.client.band || b.client.name).trim();
+      switch (sort) {
+        case "name-asc":
+          return collator.compare(nameA, nameB);
+        case "name-desc":
+          return collator.compare(nameB, nameA);
+        case "count-desc":
+          return b.count - a.count || collator.compare(nameA, nameB);
+        case "count-asc":
+          return a.count - b.count || collator.compare(nameA, nameB);
+        case "recent":
+          return b.client.createdAt.localeCompare(a.client.createdAt);
+      }
+    });
+    return withCount;
+  }, [clients, appointments, q, sort]);
 
   return (
     <>
@@ -39,14 +68,17 @@ export function ClientsView() {
           <p className="text-caption">Padu OS</p>
           <h1 className="text-[15px] font-semibold tracking-tight">Clientes</h1>
         </div>
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Buscar cliente ou banda…"
-            className="h-9 w-72 rounded-md border border-border bg-surface pl-8 pr-3 text-[12.5px] outline-none placeholder:text-muted-foreground focus:border-border-strong"
-          />
+        <div className="flex items-center gap-2">
+          <SortMenu value={sort} onChange={setSort} />
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Buscar cliente ou banda…"
+              className="h-9 w-72 rounded-md border border-border bg-surface pl-8 pr-3 text-[12.5px] outline-none placeholder:text-muted-foreground focus:border-border-strong"
+            />
+          </div>
         </div>
       </header>
 
@@ -143,5 +175,49 @@ export function ClientsView() {
         onOpenChange={setDialogOpen}
       />
     </>
+  );
+}
+
+function SortMenu({
+  value,
+  onChange,
+}: {
+  value: SortKey;
+  onChange: (v: SortKey) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const keys = Object.keys(SORT_LABELS) as SortKey[];
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex h-9 items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-[12px] font-medium text-muted-foreground transition-colors hover:border-border-strong hover:text-foreground"
+      >
+        <ArrowUpDown className="h-3.5 w-3.5" />
+        {SORT_LABELS[value]}
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full z-30 mt-1 min-w-[170px] overflow-hidden rounded-md border border-border bg-surface shadow-lg">
+            {keys.map((k) => (
+              <button
+                key={k}
+                onClick={() => {
+                  onChange(k);
+                  setOpen(false);
+                }}
+                className={cn(
+                  "w-full px-3 py-2 text-left text-[12px] transition-colors hover:bg-surface-2",
+                  value === k && "font-semibold text-primary"
+                )}
+              >
+                {SORT_LABELS[k]}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
   );
 }

@@ -8,12 +8,13 @@
 
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import type { Appointment, Client, Lead } from "./types";
+import type { Appointment, Client, FinanceEntry, Lead } from "./types";
 import { toISODate } from "./time";
 
 interface StoreShape {
   clients: Client[];
   appointments: Appointment[];
+  finance: FinanceEntry[];
   leads: Lead[];
 }
 
@@ -23,7 +24,7 @@ function emit() {
   listeners.forEach((l) => l());
 }
 
-const emptyState: StoreShape = { clients: [], appointments: [], leads: [] };
+const emptyState: StoreShape = { clients: [], appointments: [], finance: [], leads: [] };
 let state: StoreShape = emptyState;
 
 function setState(next: StoreShape) {
@@ -123,16 +124,53 @@ export function apptToRow(a: Partial<Appointment>): Record<string, unknown> {
   return out;
 }
 
+type FinanceRow = {
+  id: string;
+  kind: string;
+  category: string;
+  amount: number | string;
+  date: string;
+  description: string | null;
+  created_at: string;
+};
+
+function rowToFinance(r: FinanceRow): FinanceEntry {
+  return {
+    id: r.id,
+    kind: r.kind as FinanceEntry["kind"],
+    category: r.category,
+    amount: Number(r.amount),
+    date: r.date,
+    description: r.description ?? undefined,
+    createdAt: r.created_at,
+  };
+}
+
+export function financeToRow(f: Partial<FinanceEntry>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  if (f.id !== undefined) out.id = f.id;
+  if (f.kind !== undefined) out.kind = f.kind;
+  if (f.category !== undefined) out.category = f.category;
+  if (f.amount !== undefined) out.amount = f.amount;
+  if (f.date !== undefined) out.date = f.date;
+  if (f.description !== undefined) out.description = f.description ?? null;
+  return out;
+}
+
 // ── Boot / refresh ───────────────────────────────────────────────────────────
 
 let bootPromise: Promise<void> | null = null;
 
 async function boot() {
-  const [{ data: clientRows, error: cErr }, { data: apptRows, error: aErr }] =
-    await Promise.all([
-      supabase.from("clients").select("*").order("created_at", { ascending: false }),
-      supabase.from("appointments").select("*").order("date", { ascending: false }),
-    ]);
+  const [
+    { data: clientRows, error: cErr },
+    { data: apptRows, error: aErr },
+    { data: finRows, error: fErr },
+  ] = await Promise.all([
+    supabase.from("clients").select("*").order("created_at", { ascending: false }),
+    supabase.from("appointments").select("*").order("date", { ascending: false }),
+    supabase.from("finance_entries").select("*").order("date", { ascending: false }),
+  ]);
   if (cErr) {
     console.error("[store] failed to load clients", cErr);
     toast.error("Não consegui carregar clientes do servidor", {
@@ -145,9 +183,16 @@ async function boot() {
       description: aErr.message,
     });
   }
+  if (fErr) {
+    console.error("[store] failed to load finance entries", fErr);
+    toast.error("Não consegui carregar lançamentos financeiros", {
+      description: fErr.message,
+    });
+  }
   setState({
     clients: (clientRows ?? []).map((r) => rowToClient(r as ClientRow)),
     appointments: (apptRows ?? []).map((r) => rowToAppt(r as ApptRow)),
+    finance: (finRows ?? []).map((r) => rowToFinance(r as FinanceRow)),
     leads: state.leads,
   });
 }
@@ -315,6 +360,62 @@ export const store = {
         if (error) {
           setState({ ...state, appointments: [prev, ...state.appointments] });
           reportError("remover agendamento", error);
+        }
+      });
+  },
+
+  // ── Finance ──────────────────────────────────────────────────────────────
+  addFinance(input: Omit<FinanceEntry, "id" | "createdAt">): FinanceEntry {
+    const entry: FinanceEntry = {
+      ...input,
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+    };
+    setState({ ...state, finance: [entry, ...state.finance] });
+    void supabase
+      .from("finance_entries")
+      .insert(financeToRow(entry) as never)
+      .then(({ error }) => {
+        if (error) {
+          setState({ ...state, finance: state.finance.filter((f) => f.id !== entry.id) });
+          reportError("salvar lançamento", error);
+        }
+      });
+    return entry;
+  },
+  updateFinance(id: string, patch: Partial<Omit<FinanceEntry, "id" | "createdAt">>) {
+    const prev = state.finance.find((f) => f.id === id);
+    if (!prev) return;
+    setState({
+      ...state,
+      finance: state.finance.map((f) => (f.id === id ? { ...f, ...patch } : f)),
+    });
+    void supabase
+      .from("finance_entries")
+      .update(financeToRow(patch) as never)
+      .eq("id", id)
+      .then(({ error }) => {
+        if (error) {
+          setState({
+            ...state,
+            finance: state.finance.map((f) => (f.id === id ? prev : f)),
+          });
+          reportError("atualizar lançamento", error);
+        }
+      });
+  },
+  deleteFinance(id: string) {
+    const prev = state.finance.find((f) => f.id === id);
+    if (!prev) return;
+    setState({ ...state, finance: state.finance.filter((f) => f.id !== id) });
+    void supabase
+      .from("finance_entries")
+      .delete()
+      .eq("id", id)
+      .then(({ error }) => {
+        if (error) {
+          setState({ ...state, finance: [prev, ...state.finance] });
+          reportError("remover lançamento", error);
         }
       });
   },
