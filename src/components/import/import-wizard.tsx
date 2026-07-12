@@ -215,7 +215,8 @@ export function ImportWizard() {
 
   const [importing, setImporting] = useState(false);
   async function doImport() {
-    if (!clientPlan || !apptPlan) return;
+    if (!clientPlan || !apptPlan || importing) return;
+
     setImporting(true);
     const t = toast.loading("Importando… gravando no servidor");
     try {
