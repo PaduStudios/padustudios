@@ -5,7 +5,9 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { store } from "@/lib/scheduling/store";
 import type { Client, ClientOrigin } from "@/lib/scheduling/types";
+import { maskBrPhoneInput, isPlaceholderPhone, onlyDigits } from "@/lib/phone";
 import { cn } from "@/lib/utils";
+
 
 const ORIGINS: { value: ClientOrigin; label: string }[] = [
   { value: "whatsapp", label: "WhatsApp" },
@@ -35,9 +37,16 @@ export function ClientEditDialog({ client, open, onOpenChange }: Props) {
 
   useEffect(() => {
     if (!client) return;
+    // Standardize phone display on open — but only when it looks like a real
+    // BR number. Placeholders (00000, junk) stay untouched so we don't hide
+    // bad data.
+    const digits = onlyDigits(client.phone);
+    const initialPhone = isPlaceholderPhone(digits)
+      ? client.phone
+      : maskBrPhoneInput(client.phone);
     setForm({
       name: client.name,
-      phone: client.phone,
+      phone: initialPhone,
       email: client.email ?? "",
       band: client.band ?? "",
       members: client.members ? String(client.members) : "",
@@ -45,6 +54,7 @@ export function ClientEditDialog({ client, open, onOpenChange }: Props) {
       notes: client.notes ?? "",
     });
   }, [client]);
+
 
   if (!client) return null;
 
@@ -118,10 +128,21 @@ export function ClientEditDialog({ client, open, onOpenChange }: Props) {
             <Field label="Telefone *">
               <input
                 value={form.phone}
-                onChange={(e) => setForm((s) => ({ ...s, phone: e.target.value }))}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  const digits = onlyDigits(raw);
+                  // Placeholders stay as free-form so operators can keep junk
+                  // values (00000, "N/A") visible; real numbers get the mask.
+                  const next = isPlaceholderPhone(digits)
+                    ? raw
+                    : maskBrPhoneInput(raw);
+                  setForm((s) => ({ ...s, phone: next }));
+                }}
+                placeholder="(11) 98764-1234"
                 className="h-10 w-full rounded-md border border-border bg-surface-2 px-3 text-[13px] outline-none focus:border-primary/50"
               />
             </Field>
+
             <Field label="Email">
               <input
                 value={form.email}

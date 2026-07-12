@@ -259,12 +259,14 @@ export function PublicBooking() {
               <input
                 value={form.phone}
                 onChange={(e) =>
-                  setForm((s) => ({ ...s, phone: e.target.value }))
+                  setForm((s) => ({ ...s, phone: maskBrPhoneInput(e.target.value) }))
                 }
-                placeholder="+55 11 90000-0000"
+                placeholder="(11) 98764-1234"
+                inputMode="tel"
                 className="h-10 w-full rounded-md border border-border bg-surface-2 px-3 text-[13px] outline-none focus:border-primary/50"
               />
             </PublicField>
+
             <PublicField label="Banda">
               <input
                 value={form.band}
