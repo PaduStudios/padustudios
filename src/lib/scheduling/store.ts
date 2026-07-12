@@ -8,12 +8,13 @@
 
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import type { Appointment, Client, Lead } from "./types";
+import type { Appointment, Client, FinanceEntry, Lead } from "./types";
 import { toISODate } from "./time";
 
 interface StoreShape {
   clients: Client[];
   appointments: Appointment[];
+  finance: FinanceEntry[];
   leads: Lead[];
 }
 
