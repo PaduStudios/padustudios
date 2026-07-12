@@ -5,11 +5,9 @@ import {
   Users,
   Sparkles,
   Wallet,
-  Guitar,
   Zap,
   Settings,
   LayoutGrid,
-  ChevronsUpDown,
   Lock,
   LogOut,
 } from "lucide-react";
