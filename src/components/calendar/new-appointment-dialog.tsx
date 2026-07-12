@@ -17,6 +17,7 @@ import {
   isSlotFree,
 } from "@/lib/scheduling/availability";
 import { addMinutesToTime } from "@/lib/scheduling/time";
+import { ROOMS, suggestedPrice } from "@/lib/scheduling/pricing";
 import type {
   Appointment,
   Client,
