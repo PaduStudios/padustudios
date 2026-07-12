@@ -364,6 +364,62 @@ export const store = {
       });
   },
 
+  // ── Finance ──────────────────────────────────────────────────────────────
+  addFinance(input: Omit<FinanceEntry, "id" | "createdAt">): FinanceEntry {
+    const entry: FinanceEntry = {
+      ...input,
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+    };
+    setState({ ...state, finance: [entry, ...state.finance] });
+    void supabase
+      .from("finance_entries")
+      .insert(financeToRow(entry) as never)
+      .then(({ error }) => {
+        if (error) {
+          setState({ ...state, finance: state.finance.filter((f) => f.id !== entry.id) });
+          reportError("salvar lançamento", error);
+        }
+      });
+    return entry;
+  },
+  updateFinance(id: string, patch: Partial<Omit<FinanceEntry, "id" | "createdAt">>) {
+    const prev = state.finance.find((f) => f.id === id);
+    if (!prev) return;
+    setState({
+      ...state,
+      finance: state.finance.map((f) => (f.id === id ? { ...f, ...patch } : f)),
+    });
+    void supabase
+      .from("finance_entries")
+      .update(financeToRow(patch) as never)
+      .eq("id", id)
+      .then(({ error }) => {
+        if (error) {
+          setState({
+            ...state,
+            finance: state.finance.map((f) => (f.id === id ? prev : f)),
+          });
+          reportError("atualizar lançamento", error);
+        }
+      });
+  },
+  deleteFinance(id: string) {
+    const prev = state.finance.find((f) => f.id === id);
+    if (!prev) return;
+    setState({ ...state, finance: state.finance.filter((f) => f.id !== id) });
+    void supabase
+      .from("finance_entries")
+      .delete()
+      .eq("id", id)
+      .then(({ error }) => {
+        if (error) {
+          setState({ ...state, finance: [prev, ...state.finance] });
+          reportError("remover lançamento", error);
+        }
+      });
+  },
+
   // ── Leads (in-memory only — no table yet) ────────────────────────────────
   addLead(input: Omit<Lead, "id" | "createdAt">): Lead {
     const lead: Lead = {
