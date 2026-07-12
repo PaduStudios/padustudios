@@ -209,8 +209,10 @@ export function NewAppointmentDialog({
     }
 
     const parsedPrice = price.trim() === "" ? undefined : Number(price);
-    const priceValue =
+    const gross =
       parsedPrice != null && Number.isFinite(parsedPrice) ? parsedPrice : undefined;
+    const priceValue =
+      gross != null ? Math.max(0, gross * (1 - discountPct / 100)) : undefined;
 
     if (editing) {
       store.updateAppointment(editing.id, {
