@@ -314,14 +314,14 @@ export function NewAppointmentDialog({
                 </p>
               </Field>
 
-              <Field label="Sala">
+              <Field label="Tipo de sessão">
                 <div className="grid grid-cols-3 gap-1.5">
-                  {["Sala A", "Sala B", "Sala Master"].map((r) => (
+                  {ROOMS.map((r) => (
                     <button
                       key={r}
                       onClick={() => setRoom(r)}
                       className={cn(
-                        "h-9 rounded-md border text-[12px] font-semibold transition-colors",
+                        "h-9 rounded-md border px-1 text-[11.5px] font-semibold leading-tight transition-colors",
                         room === r
                           ? "border-primary bg-primary-muted text-primary"
                           : "border-border bg-surface-2 text-muted-foreground hover:text-foreground"
@@ -332,6 +332,40 @@ export function NewAppointmentDialog({
                   ))}
                 </div>
               </Field>
+
+              <Field label={`Valor (R$)${room === "Gravação por Canal" ? " · orçado à parte" : ""}`}>
+                <div className="relative">
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-mono text-[12px] text-muted-foreground">
+                    R$
+                  </span>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    step="0.01"
+                    value={price}
+                    onChange={(e) => {
+                      setPriceTouched(true);
+                      setPrice(e.target.value);
+                    }}
+                    placeholder={
+                      room === "Gravação por Canal"
+                        ? "Preencher manualmente"
+                        : "0,00"
+                    }
+                    className="h-10 w-full rounded-md border border-border bg-surface-2 pl-10 pr-3 font-mono text-[13px] font-medium outline-none focus:border-primary/50"
+                  />
+                </div>
+                <p className="mt-1.5 text-[11px] text-muted-foreground">
+                  {room === "Ensaio" &&
+                    `R$ 80/h · ${duration / 60}h = R$ ${(80 * duration) / 60}`}
+                  {room === "Gravação ao Vivo" &&
+                    `R$ 160/h × ${duration / 60}h + R$ 160 montagem = R$ ${(160 * duration) / 60 + 160}`}
+                  {room === "Gravação por Canal" &&
+                    "Gravação por canal é orçada à parte."}
+                </p>
+              </Field>
+
 
               {/* Availability feedback */}
               {date && availability && (
