@@ -4,7 +4,7 @@ import { CalendarView } from "@/components/calendar/calendar-view";
 export const Route = createFileRoute("/_shell/calendar")({
   head: () => ({
     meta: [
-      { title: "Calendário — Padu OS" },
+      { title: "Calendário — Padu Studios" },
       {
         name: "description",
         content:

@@ -94,7 +94,7 @@ export function ClientEditDialog({ client, open, onOpenChange }: Props) {
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
-              Padu OS · Cliente
+              Padu Studios · Cliente
             </p>
             <p className="text-[14px] font-semibold">Editar dados</p>
           </div>

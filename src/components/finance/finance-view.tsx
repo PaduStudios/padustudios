@@ -141,7 +141,7 @@ export function FinanceView() {
       <header className="sticky top-0 z-20 flex h-16 items-center justify-between gap-4 border-b border-border bg-background/70 px-6 backdrop-blur-xl">
         <div className="flex min-w-0 items-center gap-4">
           <div>
-            <p className="text-caption">Padu OS</p>
+            <p className="text-caption">Padu Studios</p>
             <h1 className="text-[15px] font-semibold tracking-tight">Financeiro</h1>
           </div>
           <div className="ml-2 flex items-center gap-1 rounded-lg border border-border bg-surface p-0.5">

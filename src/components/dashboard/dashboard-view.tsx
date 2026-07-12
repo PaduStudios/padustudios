@@ -120,7 +120,7 @@ export function DashboardView() {
     <>
       <header className="sticky top-0 z-20 flex h-16 items-center justify-between gap-4 border-b border-border bg-background/70 px-6 backdrop-blur-xl">
         <div>
-          <p className="text-caption">Padu OS</p>
+          <p className="text-caption">Padu Studios</p>
           <h1 className="text-[15px] font-semibold tracking-tight">Dashboard</h1>
         </div>
         <p className="text-[12px] text-muted-foreground">

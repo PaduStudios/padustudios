@@ -4,7 +4,7 @@ import { ImportWizard } from "@/components/import/import-wizard";
 export const Route = createFileRoute("/_shell/settings/import")({
   head: () => ({
     meta: [
-      { title: "Importar do SuperSaaS — Padu OS" },
+      { title: "Importar do SuperSaaS — Padu Studios" },
       {
         name: "description",
         content:
