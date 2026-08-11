@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { createClient } from "@supabase/supabase-js";
 import { generateText } from "ai";
 import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
 import { evolutionSendText } from "@/lib/whatsapp/evolution.server";
@@ -41,10 +40,9 @@ export const Route = createFileRoute("/api/public/hooks/whatsapp")({
         const url = new URL(request.url);
         const providedToken = url.searchParams.get("token") ?? "";
 
-        const supabase = createClient(
-          process.env.SUPABASE_URL!,
-          process.env.SUPABASE_PUBLISHABLE_KEY!,
-          { auth: { persistSession: false, autoRefreshToken: false } }
+        // wa_* tables are locked to the service role — use the admin client.
+        const { supabaseAdmin: supabase } = await import(
+          "@/integrations/supabase/client.server"
         );
 
         const { data: settings, error: sErr } = await supabase
