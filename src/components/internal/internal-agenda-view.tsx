@@ -27,6 +27,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { CreateTaskDialog } from "@/components/internal/create-task-dialog";
 
 const ROW_HEIGHT = 44;
 const HOURS = DAY_END_HOUR - DAY_START_HOUR;
@@ -49,6 +50,7 @@ export function InternalAgendaView() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<InternalEvent | null>(null);
   const [seed, setSeed] = useState<{ date: string; start: string } | null>(null);
+  const [taskOpen, setTaskOpen] = useState(false);
 
   const days = useMemo(() => weekDays(anchor), [anchor]);
   const rangeLabel = useMemo(() => {
@@ -180,6 +182,8 @@ export function InternalAgendaView() {
           />
         </div>
       </div>
+
+      <CreateTaskDialog open={taskOpen} onOpenChange={setTaskOpen} />
 
       <InternalEventDialog
         open={dialogOpen}
