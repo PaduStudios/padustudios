@@ -51,7 +51,10 @@ export const getWaSettings = createServerFn({ method: "GET" }).handler(async () 
     id: row!.id,
     evolution_url: row!.evolution_url,
     evolution_instance: row!.evolution_instance,
-    kb_json: Array.isArray(row!.kb_json) ? (row!.kb_json as unknown[]) : [],
+    kb_json: (Array.isArray(row!.kb_json)
+      ? (row!.kb_json as { question?: string; answer?: string }[])
+      : []
+    ).map((k) => ({ question: String(k?.question ?? ""), answer: String(k?.answer ?? "") })),
     agent_prompt: row!.agent_prompt,
     enable_faq: row!.enable_faq,
     enable_scheduling: row!.enable_scheduling,
