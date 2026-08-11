@@ -1,23 +1,27 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Loader2, Plus, Trash2, Zap, Save, QrCode, Wifi } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
-import { testEvolutionConnection } from "@/lib/whatsapp/settings.functions";
+import {
+  getWaSettings,
+  saveWaSettings,
+  testEvolutionConnection,
+} from "@/lib/whatsapp/settings.functions";
 import { cn } from "@/lib/utils";
 
 type KbItem = { question: string; answer: string };
 type Settings = {
   id: string;
   evolution_url: string | null;
-  evolution_token: string | null;
   evolution_instance: string | null;
   kb_json: KbItem[];
   agent_prompt: string;
   enable_faq: boolean;
   enable_scheduling: boolean;
   enable_reminders: boolean;
-  webhook_secret: string | null;
+  /** Secrets are never loaded from the server — only set/overwritten here. */
+  hasToken: boolean;
+  hasWebhookSecret: boolean;
 };
 
 export function AutomationView() {
@@ -28,73 +32,75 @@ export function AutomationView() {
   const [qr, setQr] = useState<string | null>(null);
   const [connState, setConnState] = useState<string | null>(null);
   const test = useServerFn(testEvolutionConnection);
+  const load = useServerFn(getWaSettings);
+  const persist = useServerFn(saveWaSettings);
+  // Secrets live server-side; these hold new values typed by the admin.
+  const [token, setToken] = useState("");
+  const [secret, setSecret] = useState("");
 
   useEffect(() => {
     (async () => {
-      const { data, error } = await supabase
-        .from("wa_settings")
-        .select("*")
-        .order("created_at", { ascending: true })
-        .limit(1)
-        .maybeSingle();
-      if (error) {
+      try {
+        const row = await load({});
+        setS({ ...row, kb_json: row.kb_json as KbItem[] });
+      } catch {
         toast.error("Erro ao carregar configuração");
+      } finally {
         setLoading(false);
-        return;
       }
-      let row = data;
-      if (!row) {
-        const { data: ins } = await supabase
-          .from("wa_settings")
-          .insert({})
-          .select("*")
-          .single();
-        row = ins;
-      }
-      if (row) {
-        setS({
-          ...row,
-          kb_json: Array.isArray(row.kb_json) ? (row.kb_json as KbItem[]) : [],
-        });
-      }
-      setLoading(false);
     })();
-  }, []);
+  }, [load]);
 
   async function save() {
     if (!s) return;
     setSaving(true);
-    const { error } = await supabase
-      .from("wa_settings")
-      .update({
-        evolution_url: s.evolution_url,
-        evolution_token: s.evolution_token,
-        evolution_instance: s.evolution_instance,
-        kb_json: s.kb_json,
-        agent_prompt: s.agent_prompt,
-        enable_faq: s.enable_faq,
-        enable_scheduling: s.enable_scheduling,
-        enable_reminders: s.enable_reminders,
-        webhook_secret: s.webhook_secret,
-      })
-      .eq("id", s.id);
-    setSaving(false);
-    if (error) toast.error("Erro ao salvar: " + error.message);
-    else toast.success("Configuração salva");
+    try {
+      await persist({
+        data: {
+          id: s.id,
+          evolution_url: s.evolution_url,
+          evolution_instance: s.evolution_instance,
+          evolution_token: token || undefined,
+          webhook_secret: secret || undefined,
+          kb_json: s.kb_json,
+          agent_prompt: s.agent_prompt,
+          enable_faq: s.enable_faq,
+          enable_scheduling: s.enable_scheduling,
+          enable_reminders: s.enable_reminders,
+        },
+      });
+      if (token) setS({ ...s, hasToken: true });
+      if (secret) setS((prev) => (prev ? { ...prev, hasWebhookSecret: true } : prev));
+      setToken("");
+      setSecret("");
+      toast.success("Configuração salva");
+    } catch (e) {
+      toast.error("Erro ao salvar: " + (e instanceof Error ? e.message : ""));
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleTest() {
     if (!s) return;
     setSaving(true);
     // ensure fields are persisted before probing
-    await supabase
-      .from("wa_settings")
-      .update({
-        evolution_url: s.evolution_url,
-        evolution_token: s.evolution_token,
-        evolution_instance: s.evolution_instance,
-      })
-      .eq("id", s.id);
+    try {
+      await persist({
+        data: {
+          id: s.id,
+          evolution_url: s.evolution_url,
+          evolution_instance: s.evolution_instance,
+          evolution_token: token || undefined,
+        },
+      });
+      if (token) {
+        setS({ ...s, hasToken: true });
+        setToken("");
+      }
+    } catch {
+      /* surfaced below by the connection test */
+    }
     setSaving(false);
     setTesting(true);
     try {
@@ -126,7 +132,7 @@ export function AutomationView() {
 
   const webhookUrl =
     typeof window !== "undefined"
-      ? `${window.location.origin}/api/public/hooks/whatsapp${s.webhook_secret ? `?token=${encodeURIComponent(s.webhook_secret)}` : ""}`
+      ? `${window.location.origin}/api/public/hooks/whatsapp${s.hasWebhookSecret ? "?token=SEU_TOKEN" : ""}`
       : "";
 
   return (
@@ -183,10 +189,11 @@ export function AutomationView() {
                 onChange={(v) => setS({ ...s, evolution_url: v })}
               />
               <Field
-                label="Token (apikey)"
+                label={s.hasToken ? "Token (apikey) — salvo" : "Token (apikey)"}
                 type="password"
-                value={s.evolution_token ?? ""}
-                onChange={(v) => setS({ ...s, evolution_token: v })}
+                placeholder={s.hasToken ? "•••••• (deixe em branco para manter)" : ""}
+                value={token}
+                onChange={setToken}
               />
               <Field
                 label="Nome da instância"
@@ -196,7 +203,7 @@ export function AutomationView() {
               />
               <button
                 onClick={handleTest}
-                disabled={testing || !s.evolution_url || !s.evolution_token || !s.evolution_instance}
+                disabled={testing || !s.evolution_url || !(s.hasToken || token) || !s.evolution_instance}
                 className="flex h-9 items-center justify-center gap-2 rounded-md border border-primary/30 bg-primary/10 px-3 text-[12.5px] font-semibold text-primary transition-colors hover:bg-primary/15 disabled:opacity-50"
               >
                 {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <QrCode className="h-4 w-4" />}
@@ -236,12 +243,24 @@ export function AutomationView() {
               {webhookUrl}
             </code>
             <Field
-              label="Token do webhook (secreto)"
+              label={
+                s.hasWebhookSecret
+                  ? "Token do webhook (secreto) — salvo"
+                  : "Token do webhook (secreto)"
+              }
               type="password"
-              placeholder="deixe em branco para desabilitar checagem"
-              value={s.webhook_secret ?? ""}
-              onChange={(v) => setS({ ...s, webhook_secret: v })}
+              placeholder={
+                s.hasWebhookSecret
+                  ? "•••••• (deixe em branco para manter)"
+                  : "defina um token para proteger o webhook"
+              }
+              value={secret}
+              onChange={setSecret}
             />
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              Por segurança o token não é exibido depois de salvo — substitua
+              SEU_TOKEN na URL acima pelo valor que você cadastrou.
+            </p>
           </section>
 
           {/* Toggles */}

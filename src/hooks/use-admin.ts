@@ -28,20 +28,17 @@ function notify() {
 }
 
 export function useAdmin() {
-  const [isAdmin, setIsAdmin] = useState<boolean>(() =>
-    typeof window !== "undefined"
-      ? localStorage.getItem(SESSION_KEY) === "1"
-      : false
-  );
-  const [hasCreds, setHasCreds] = useState<boolean>(() =>
-    typeof window !== "undefined" ? !!readCreds() : false
-  );
+  // Start signed-out on both server and client so the first client render
+  // matches the SSR output; the real session is read after hydration.
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [hasCreds, setHasCreds] = useState(false);
 
   useEffect(() => {
     const sync = () => {
       setIsAdmin(localStorage.getItem(SESSION_KEY) === "1");
       setHasCreds(!!readCreds());
     };
+    sync();
     listeners.add(sync);
     window.addEventListener("storage", sync);
     return () => {
@@ -49,6 +46,7 @@ export function useAdmin() {
       window.removeEventListener("storage", sync);
     };
   }, []);
+
 
   const setup = useCallback(
     async (username: string, password: string) => {
