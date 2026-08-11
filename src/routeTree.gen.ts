@@ -13,6 +13,7 @@ import { Route as BookRouteImport } from './routes/book'
 import { Route as ShellRouteImport } from './routes/_shell'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ShellSettingsRouteImport } from './routes/_shell.settings'
+import { Route as ShellInternalRouteImport } from './routes/_shell.internal'
 import { Route as ShellFinanceRouteImport } from './routes/_shell.finance'
 import { Route as ShellEquipmentRouteImport } from './routes/_shell.equipment'
 import { Route as ShellDashboardRouteImport } from './routes/_shell.dashboard'
@@ -41,6 +42,11 @@ const IndexRoute = IndexRouteImport.update({
 const ShellSettingsRoute = ShellSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => ShellRoute,
+} as any)
+const ShellInternalRoute = ShellInternalRouteImport.update({
+  id: '/internal',
+  path: '/internal',
   getParentRoute: () => ShellRoute,
 } as any)
 const ShellFinanceRoute = ShellFinanceRouteImport.update({
@@ -104,6 +110,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof ShellDashboardRoute
   '/equipment': typeof ShellEquipmentRoute
   '/finance': typeof ShellFinanceRoute
+  '/internal': typeof ShellInternalRoute
   '/settings': typeof ShellSettingsRouteWithChildren
   '/settings/import': typeof ShellSettingsImportRoute
   '/settings/': typeof ShellSettingsIndexRoute
@@ -119,6 +126,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof ShellDashboardRoute
   '/equipment': typeof ShellEquipmentRoute
   '/finance': typeof ShellFinanceRoute
+  '/internal': typeof ShellInternalRoute
   '/settings/import': typeof ShellSettingsImportRoute
   '/settings': typeof ShellSettingsIndexRoute
   '/api/public/hooks/whatsapp': typeof ApiPublicHooksWhatsappRoute
@@ -135,6 +143,7 @@ export interface FileRoutesById {
   '/_shell/dashboard': typeof ShellDashboardRoute
   '/_shell/equipment': typeof ShellEquipmentRoute
   '/_shell/finance': typeof ShellFinanceRoute
+  '/_shell/internal': typeof ShellInternalRoute
   '/_shell/settings': typeof ShellSettingsRouteWithChildren
   '/_shell/settings/import': typeof ShellSettingsImportRoute
   '/_shell/settings/': typeof ShellSettingsIndexRoute
@@ -152,6 +161,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/equipment'
     | '/finance'
+    | '/internal'
     | '/settings'
     | '/settings/import'
     | '/settings/'
@@ -167,6 +177,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/equipment'
     | '/finance'
+    | '/internal'
     | '/settings/import'
     | '/settings'
     | '/api/public/hooks/whatsapp'
@@ -182,6 +193,7 @@ export interface FileRouteTypes {
     | '/_shell/dashboard'
     | '/_shell/equipment'
     | '/_shell/finance'
+    | '/_shell/internal'
     | '/_shell/settings'
     | '/_shell/settings/import'
     | '/_shell/settings/'
@@ -223,6 +235,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof ShellSettingsRouteImport
+      parentRoute: typeof ShellRoute
+    }
+    '/_shell/internal': {
+      id: '/_shell/internal'
+      path: '/internal'
+      fullPath: '/internal'
+      preLoaderRoute: typeof ShellInternalRouteImport
       parentRoute: typeof ShellRoute
     }
     '/_shell/finance': {
@@ -320,6 +339,7 @@ interface ShellRouteChildren {
   ShellDashboardRoute: typeof ShellDashboardRoute
   ShellEquipmentRoute: typeof ShellEquipmentRoute
   ShellFinanceRoute: typeof ShellFinanceRoute
+  ShellInternalRoute: typeof ShellInternalRoute
   ShellSettingsRoute: typeof ShellSettingsRouteWithChildren
 }
 
@@ -331,6 +351,7 @@ const ShellRouteChildren: ShellRouteChildren = {
   ShellDashboardRoute: ShellDashboardRoute,
   ShellEquipmentRoute: ShellEquipmentRoute,
   ShellFinanceRoute: ShellFinanceRoute,
+  ShellInternalRoute: ShellInternalRoute,
   ShellSettingsRoute: ShellSettingsRouteWithChildren,
 }
 
@@ -345,13 +366,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
