@@ -14,52 +14,48 @@ interface Props {
   onOpenChange: (open: boolean) => void;
 }
 
-const ALLOWED_USERNAME = "padustudios";
-
 export function AdminLoginDialog({ open, onOpenChange }: Props) {
-  const { hasCreds, setup, login } = useAdmin();
-  const [username, setUsername] = useState("");
+  const { signIn, signUp } = useAdmin();
+  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!open) {
-      setUsername("");
+      setEmail("");
       setPassword("");
+      setMode("login");
     }
   }, [open]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    const user = username.trim().toLowerCase();
-    if (!user || !password) {
-      toast.error("Preencha usuário e senha");
+    const mail = email.trim().toLowerCase();
+    if (!mail || !password) {
+      toast.error("Preencha e-mail e senha");
       return;
     }
-    if (user !== ALLOWED_USERNAME) {
-      toast.error("Usuário ou senha incorretos");
+    if (mode === "signup" && password.length < 6) {
+      toast.error("A senha precisa ter ao menos 6 caracteres");
       return;
     }
     setLoading(true);
     try {
-      // First-time bootstrap on this device: only "padustudios" pode registrar.
-      if (!hasCreds) {
-        if (password.length < 4) {
-          toast.error("Senha muito curta");
-          return;
-        }
-        await setup(user, password);
-        toast.success("Bem-vindo");
-        onOpenChange(false);
+      const error =
+        mode === "signup"
+          ? await signUp(mail, password)
+          : await signIn(mail, password);
+      if (error) {
+        toast.error(
+          error.includes("Invalid login")
+            ? "E-mail ou senha incorretos"
+            : error
+        );
         return;
       }
-      const ok = await login(user, password);
-      if (ok) {
-        toast.success("Bem-vindo");
-        onOpenChange(false);
-      } else {
-        toast.error("Usuário ou senha incorretos");
-      }
+      toast.success("Bem-vindo");
+      onOpenChange(false);
     } finally {
       setLoading(false);
     }
@@ -76,7 +72,9 @@ export function AdminLoginDialog({ open, onOpenChange }: Props) {
             <Lock className="h-4 w-4" />
           </div>
           <div>
-            <DialogTitle className="text-[14px] font-semibold">Login</DialogTitle>
+            <DialogTitle className="text-[14px] font-semibold">
+              {mode === "signup" ? "Criar acesso admin" : "Login"}
+            </DialogTitle>
             <DialogDescription className="text-[11.5px] text-muted-foreground">
               Entre para acessar todos os módulos.
             </DialogDescription>
@@ -86,12 +84,14 @@ export function AdminLoginDialog({ open, onOpenChange }: Props) {
         <form onSubmit={submit} className="space-y-3 p-5">
           <label className="block">
             <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Usuário
+              E-mail
             </span>
             <input
               autoFocus
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="h-10 w-full rounded-md border border-border bg-surface-2 px-3 text-[13px] outline-none focus:border-primary/50"
             />
           </label>
@@ -101,6 +101,7 @@ export function AdminLoginDialog({ open, onOpenChange }: Props) {
             </span>
             <input
               type="password"
+              autoComplete={mode === "signup" ? "new-password" : "current-password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="h-10 w-full rounded-md border border-border bg-surface-2 px-3 text-[13px] outline-none focus:border-primary/50"
@@ -111,7 +112,16 @@ export function AdminLoginDialog({ open, onOpenChange }: Props) {
             disabled={loading}
             className="mt-2 h-10 w-full rounded-md bg-primary text-[13px] font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
           >
-            Entrar
+            {mode === "signup" ? "Criar acesso" : "Entrar"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode(mode === "signup" ? "login" : "signup")}
+            className="w-full text-[11.5px] text-muted-foreground underline-offset-2 hover:underline"
+          >
+            {mode === "signup"
+              ? "Já tenho acesso — entrar"
+              : "Primeiro acesso? Criar conta de administrador"}
           </button>
         </form>
       </DialogContent>
