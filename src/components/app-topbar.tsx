@@ -47,7 +47,7 @@ const nav: NavItem[] = [
 
 export function AppTopbar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const { isAdmin, hasCreds, logout } = useAdmin();
+  const { isAdmin, logout } = useAdmin();
   const [loginOpen, setLoginOpen] = useState(false);
 
   const items = nav.filter((i) => isAdmin || !i.adminOnly);

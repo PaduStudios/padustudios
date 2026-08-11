@@ -40,7 +40,7 @@ const operations: NavItem[] = [
 
 export function AppSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const { isAdmin, hasCreds, logout } = useAdmin();
+  const { isAdmin, logout } = useAdmin();
   const [loginOpen, setLoginOpen] = useState(false);
 
   const filter = (items: NavItem[]) =>
@@ -101,7 +101,7 @@ export function AppSidebar() {
           ) : (
             <>
               <Lock className="h-3.5 w-3.5" />
-              {hasCreds ? "Login Admin" : "Criar acesso admin"}
+              {"Login"}
             </>
           )}
         </button>

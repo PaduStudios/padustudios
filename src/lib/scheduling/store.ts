@@ -208,16 +208,28 @@ export function internalToRow(e: Partial<InternalEvent>): Record<string, unknown
 let bootPromise: Promise<void> | null = null;
 
 async function boot() {
+  // Visitors (not signed in) may only read the busy slots for the public
+  // calendar — clients, finance and the internal agenda are admin-only.
+  const { data: sessionData } = await supabase.auth.getSession();
+  const signedIn = !!sessionData.session;
+
+  const emptyResult = { data: [] as unknown[], error: null };
   const [
     { data: clientRows, error: cErr },
     { data: apptRows, error: aErr },
     { data: finRows, error: fErr },
     { data: internalRows, error: iErr },
   ] = await Promise.all([
-    supabase.from("clients").select("*").order("created_at", { ascending: false }),
+    signedIn
+      ? supabase.from("clients").select("*").order("created_at", { ascending: false })
+      : Promise.resolve(emptyResult),
     supabase.from("appointments").select("*").order("date", { ascending: false }),
-    supabase.from("finance_entries").select("*").order("date", { ascending: false }),
-    supabase.from("internal_events").select("*").order("date", { ascending: false }),
+    signedIn
+      ? supabase.from("finance_entries").select("*").order("date", { ascending: false })
+      : Promise.resolve(emptyResult),
+    signedIn
+      ? supabase.from("internal_events").select("*").order("date", { ascending: false })
+      : Promise.resolve(emptyResult),
   ]);
   if (cErr) {
     console.error("[store] failed to load clients", cErr);
@@ -253,6 +265,15 @@ function ensureBooted() {
   if (typeof window === "undefined") return;
   if (!bootPromise) bootPromise = boot();
 }
+
+if (typeof window !== "undefined") {
+  // Reload the dataset whenever the admin signs in or out.
+  supabase.auth.onAuthStateChange((event) => {
+    if (event !== "SIGNED_IN" && event !== "SIGNED_OUT") return;
+    bootPromise = boot();
+  });
+}
+
 
 // ── Store API ────────────────────────────────────────────────────────────────
 

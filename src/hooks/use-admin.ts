@@ -1,85 +1,75 @@
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
-const CREDS_KEY = "padu:admin:creds";
-const SESSION_KEY = "padu:admin:session";
-
-async function hash(text: string): Promise<string> {
-  const data = new TextEncoder().encode(text);
-  const buf = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(buf))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-type Creds = { username: string; passwordHash: string };
-
-function readCreds(): Creds | null {
-  try {
-    const raw = localStorage.getItem(CREDS_KEY);
-    return raw ? (JSON.parse(raw) as Creds) : null;
-  } catch {
-    return null;
-  }
-}
-
-const listeners = new Set<() => void>();
-function notify() {
-  listeners.forEach((fn) => fn());
-}
-
+/**
+ * Admin session backed by Lovable Cloud auth.
+ *
+ * `isAdmin` is true only when there is a real signed-in user that carries the
+ * `admin` role in the database — the browser cannot fake it, and every write
+ * to clients / agendamentos / financeiro / agenda interna is enforced by
+ * row-level security on the server.
+ */
 export function useAdmin() {
-  // Start signed-out on both server and client so the first client render
-  // matches the SSR output; the real session is read after hydration.
   const [isAdmin, setIsAdmin] = useState(false);
-  const [hasCreds, setHasCreds] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const sync = () => {
-      setIsAdmin(localStorage.getItem(SESSION_KEY) === "1");
-      setHasCreds(!!readCreds());
-    };
-    sync();
-    listeners.add(sync);
-    window.addEventListener("storage", sync);
-    return () => {
-      listeners.delete(sync);
-      window.removeEventListener("storage", sync);
-    };
-  }, []);
+    let active = true;
 
-
-  const setup = useCallback(
-    async (username: string, password: string) => {
-      const passwordHash = await hash(password);
-      localStorage.setItem(
-        CREDS_KEY,
-        JSON.stringify({ username, passwordHash } satisfies Creds)
-      );
-      localStorage.setItem(SESSION_KEY, "1");
-      notify();
-    },
-    []
-  );
-
-  const login = useCallback(
-    async (username: string, password: string): Promise<boolean> => {
-      const creds = readCreds();
-      if (!creds) return false;
-      const passwordHash = await hash(password);
-      if (creds.username === username && creds.passwordHash === passwordHash) {
-        localStorage.setItem(SESSION_KEY, "1");
-        notify();
-        return true;
+    async function resolve(userId: string | undefined) {
+      if (!userId) {
+        if (active) {
+          setIsAdmin(false);
+          setLoading(false);
+        }
+        return;
       }
-      return false;
-    },
-    []
-  );
+      const { data } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .eq("role", "admin")
+        .maybeSingle();
+      if (active) {
+        setIsAdmin(!!data);
+        setLoading(false);
+      }
+    }
 
-  const logout = useCallback(() => {
-    localStorage.removeItem(SESSION_KEY);
-    notify();
+    supabase.auth.getSession().then(({ data }) => {
+      void resolve(data.session?.user.id);
+    });
+
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION") return;
+      setLoading(true);
+      void resolve(session?.user.id);
+    });
+
+    return () => {
+      active = false;
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
-  return { isAdmin, hasCreds, setup, login, logout };
+  const signIn = useCallback(async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    return error ? error.message : null;
+  }, []);
+
+  const signUp = useCallback(async (email: string, password: string) => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: window.location.origin },
+    });
+    return error ? error.message : null;
+  }, []);
+
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut();
+    setIsAdmin(false);
+  }, []);
+
+  return { isAdmin, loading, signIn, signUp, logout };
 }
