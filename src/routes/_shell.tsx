@@ -10,15 +10,18 @@ export const Route = createFileRoute("/_shell")({
 const ADMIN_PREFIXES = ["/dashboard", "/clients", "/crm", "/finance", "/equipment", "/automation", "/settings", "/internal"];
 
 function ShellLayout() {
-  const { isAdmin } = useAdmin();
+  const { isAdmin, loading } = useAdmin();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
+  const isAdminRoute = ADMIN_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(p + "/")
+  );
 
   useEffect(() => {
-    if (!isAdmin && ADMIN_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
+    if (!loading && !isAdmin && isAdminRoute) {
       navigate({ to: "/calendar", replace: true });
     }
-  }, [isAdmin, pathname, navigate]);
+  }, [isAdmin, loading, isAdminRoute, navigate]);
 
   return (
     <div className="flex h-screen w-full flex-col overflow-hidden bg-background text-foreground">
@@ -33,8 +36,9 @@ function ShellLayout() {
       />
       <AppTopbar />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
-        <Outlet />
+        {isAdminRoute && !isAdmin ? null : <Outlet />}
       </div>
+
     </div>
   );
 }
