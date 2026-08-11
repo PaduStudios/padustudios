@@ -7,7 +7,7 @@ export const Route = createFileRoute("/_shell")({
   component: ShellLayout,
 });
 
-const ADMIN_PREFIXES = ["/dashboard", "/clients", "/crm", "/finance", "/equipment", "/automation", "/settings"];
+const ADMIN_PREFIXES = ["/dashboard", "/clients", "/crm", "/finance", "/equipment", "/automation", "/settings", "/internal"];
 
 function ShellLayout() {
   const { isAdmin } = useAdmin();

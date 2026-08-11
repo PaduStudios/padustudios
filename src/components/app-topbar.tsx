@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   Calendar,
+  ClipboardList,
+
   Users,
   Sparkles,
   Wallet,
@@ -34,12 +36,14 @@ interface NavItem {
 
 const nav: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutGrid, adminOnly: true },
-  { to: "/calendar", label: "Calendário", icon: Calendar },
+  { to: "/calendar", label: "Agenda Studio", icon: Calendar },
+  { to: "/internal", label: "Agenda Interna", icon: ClipboardList, adminOnly: true },
   { to: "/clients", label: "Clientes", icon: Users, adminOnly: true },
   { to: "/crm", label: "CRM", icon: Sparkles, adminOnly: true },
   { to: "/finance", label: "Financeiro", icon: Wallet, adminOnly: true },
   { to: "/automation", label: "Automação", icon: Zap, adminOnly: true },
 ];
+
 
 export function AppTopbar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });

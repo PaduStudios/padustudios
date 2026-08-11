@@ -36,6 +36,24 @@ export interface Appointment {
   createdAt: string;
 }
 
+/** Owners of the internal (team) agenda. */
+export const INTERNAL_OWNERS = ["Padu", "Flávio", "Guma", "Luísa"] as const;
+export type InternalOwner = (typeof INTERNAL_OWNERS)[number];
+
+/** An entry on the internal team agenda (tasks / obligations, no client). */
+export interface InternalEvent {
+  id: string;
+  owner: string;
+  title: string;
+  /** ISO date (yyyy-MM-dd). */
+  date: string;
+  start: string;
+  end: string;
+  status: AppointmentStatus;
+  notes?: string;
+  createdAt: string;
+}
+
 export interface Lead {
   id: string;
   name: string;

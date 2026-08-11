@@ -8,13 +8,14 @@
 
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import type { Appointment, Client, FinanceEntry, Lead } from "./types";
+import type { Appointment, Client, FinanceEntry, InternalEvent, Lead } from "./types";
 import { toISODate } from "./time";
 
 interface StoreShape {
   clients: Client[];
   appointments: Appointment[];
   finance: FinanceEntry[];
+  internalEvents: InternalEvent[];
   leads: Lead[];
 }
 
@@ -24,7 +25,13 @@ function emit() {
   listeners.forEach((l) => l());
 }
 
-const emptyState: StoreShape = { clients: [], appointments: [], finance: [], leads: [] };
+const emptyState: StoreShape = {
+  clients: [],
+  appointments: [],
+  finance: [],
+  internalEvents: [],
+  leads: [],
+};
 let state: StoreShape = emptyState;
 
 function setState(next: StoreShape) {
@@ -157,6 +164,45 @@ export function financeToRow(f: Partial<FinanceEntry>): Record<string, unknown> 
   return out;
 }
 
+type InternalRow = {
+  id: string;
+  owner: string;
+  title: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  status: string;
+  notes: string | null;
+  created_at: string;
+};
+
+function rowToInternal(r: InternalRow): InternalEvent {
+  return {
+    id: r.id,
+    owner: r.owner,
+    title: r.title,
+    date: r.date,
+    start: r.start_time,
+    end: r.end_time,
+    status: r.status as InternalEvent["status"],
+    notes: r.notes ?? undefined,
+    createdAt: r.created_at,
+  };
+}
+
+export function internalToRow(e: Partial<InternalEvent>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  if (e.id !== undefined) out.id = e.id;
+  if (e.owner !== undefined) out.owner = e.owner;
+  if (e.title !== undefined) out.title = e.title;
+  if (e.date !== undefined) out.date = e.date;
+  if (e.start !== undefined) out.start_time = e.start;
+  if (e.end !== undefined) out.end_time = e.end;
+  if (e.status !== undefined) out.status = e.status;
+  if (e.notes !== undefined) out.notes = e.notes ?? null;
+  return out;
+}
+
 // ── Boot / refresh ───────────────────────────────────────────────────────────
 
 let bootPromise: Promise<void> | null = null;
@@ -166,10 +212,12 @@ async function boot() {
     { data: clientRows, error: cErr },
     { data: apptRows, error: aErr },
     { data: finRows, error: fErr },
+    { data: internalRows, error: iErr },
   ] = await Promise.all([
     supabase.from("clients").select("*").order("created_at", { ascending: false }),
     supabase.from("appointments").select("*").order("date", { ascending: false }),
     supabase.from("finance_entries").select("*").order("date", { ascending: false }),
+    supabase.from("internal_events").select("*").order("date", { ascending: false }),
   ]);
   if (cErr) {
     console.error("[store] failed to load clients", cErr);
@@ -189,10 +237,14 @@ async function boot() {
       description: fErr.message,
     });
   }
+  if (iErr) {
+    console.error("[store] failed to load internal events", iErr);
+  }
   setState({
     clients: (clientRows ?? []).map((r) => rowToClient(r as ClientRow)),
     appointments: (apptRows ?? []).map((r) => rowToAppt(r as ApptRow)),
     finance: (finRows ?? []).map((r) => rowToFinance(r as FinanceRow)),
+    internalEvents: (internalRows ?? []).map((r) => rowToInternal(r as InternalRow)),
     leads: state.leads,
   });
 }
@@ -416,6 +468,70 @@ export const store = {
         if (error) {
           setState({ ...state, finance: [prev, ...state.finance] });
           reportError("remover lançamento", error);
+        }
+      });
+  },
+
+  // ── Internal agenda ──────────────────────────────────────────────────────
+  addInternalEvent(input: Omit<InternalEvent, "id" | "createdAt">): InternalEvent {
+    const ev: InternalEvent = {
+      ...input,
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+    };
+    setState({ ...state, internalEvents: [ev, ...state.internalEvents] });
+    void supabase
+      .from("internal_events")
+      .insert(internalToRow(ev) as never)
+      .then(({ error }) => {
+        if (error) {
+          setState({
+            ...state,
+            internalEvents: state.internalEvents.filter((e) => e.id !== ev.id),
+          });
+          reportError("salvar tarefa interna", error);
+        }
+      });
+    return ev;
+  },
+  updateInternalEvent(id: string, patch: Partial<Omit<InternalEvent, "id" | "createdAt">>) {
+    const prev = state.internalEvents.find((e) => e.id === id);
+    if (!prev) return;
+    setState({
+      ...state,
+      internalEvents: state.internalEvents.map((e) =>
+        e.id === id ? { ...e, ...patch } : e
+      ),
+    });
+    void supabase
+      .from("internal_events")
+      .update(internalToRow(patch) as never)
+      .eq("id", id)
+      .then(({ error }) => {
+        if (error) {
+          setState({
+            ...state,
+            internalEvents: state.internalEvents.map((e) => (e.id === id ? prev : e)),
+          });
+          reportError("atualizar tarefa interna", error);
+        }
+      });
+  },
+  deleteInternalEvent(id: string) {
+    const prev = state.internalEvents.find((e) => e.id === id);
+    if (!prev) return;
+    setState({
+      ...state,
+      internalEvents: state.internalEvents.filter((e) => e.id !== id),
+    });
+    void supabase
+      .from("internal_events")
+      .delete()
+      .eq("id", id)
+      .then(({ error }) => {
+        if (error) {
+          setState({ ...state, internalEvents: [prev, ...state.internalEvents] });
+          reportError("remover tarefa interna", error);
         }
       });
   },
